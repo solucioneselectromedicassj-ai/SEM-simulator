@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="80" fill="#0B1520"/>
+  <!-- Grid lines subtle -->
+  <line x1="0" y1="128" x2="512" y2="128" stroke="#ffffff" stroke-opacity="0.04" stroke-width="1"/>
+  <line x1="0" y1="256" x2="512" y2="256" stroke="#ffffff" stroke-opacity="0.04" stroke-width="1"/>
+  <line x1="0" y1="384" x2="512" y2="384" stroke="#ffffff" stroke-opacity="0.04" stroke-width="1"/>
+  <line x1="128" y1="0" x2="128" y2="512" stroke="#ffffff" stroke-opacity="0.04" stroke-width="1"/>
+  <line x1="256" y1="0" x2="256" y2="512" stroke="#ffffff" stroke-opacity="0.04" stroke-width="1"/>
+  <line x1="384" y1="0" x2="384" y2="512" stroke="#ffffff" stroke-opacity="0.04" stroke-width="1"/>
+  <!-- ECG waveform glow -->
+  <filter id="glow">
+    <feGaussianBlur stdDeviation="6" result="coloredBlur"/>
+    <feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge>
+  </filter>
+  <!-- ECG trace -->
+  <polyline
+    points="30,256 90,256 110,256 126,220 142,310 158,100 174,380 190,240 210,256 280,256 296,220 312,310 328,100 344,380 360,240 380,256 482,256"
+    fill="none"
+    stroke="#00C896"
+    stroke-width="14"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    filter="url(#glow)"
+  />
+  <!-- SEM text -->
+  <text x="256" y="460" font-family="monospace" font-size="52" font-weight="bold" fill="#00C896" fill-opacity="0.7" text-anchor="middle" letter-spacing="8">SEM</text>
+</svg>
