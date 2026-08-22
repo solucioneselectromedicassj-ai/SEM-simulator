@@ -2,15 +2,15 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="SEM Sim">
 <meta name="theme-color" content="#0B1520">
 <link rel="manifest" href="/manifest.json">
-<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
-<link rel="icon" type="image/svg+xml" href="/icons/icon.svg">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png">
 <title>SEM Simulator</title>
 <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
@@ -18,22 +18,21 @@
 <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-html,body{height:100%;overflow:hidden;font-family:'Inter',sans-serif}
+html,body,#root{height:100%;overflow:hidden;font-family:'Inter',sans-serif;background:#07090F}
 ::-webkit-scrollbar{width:4px;height:4px}
 ::-webkit-scrollbar-thumb{background:#334155;border-radius:2px}
 @keyframes blink{50%{opacity:0.15}}
-@keyframes calPulse{0%,100%{opacity:1}50%{opacity:0.5}}
-input[type=range]{-webkit-appearance:none;height:4px;border-radius:2px;background:#1E2D3D;outline:none}
-input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:#00C896;cursor:pointer;box-shadow:0 0 6px rgba(0,200,150,0.5)}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+input[type=range]{-webkit-appearance:none;height:4px;border-radius:2px;background:#1E2D3D;outline:none;width:100%}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:#00C896;cursor:pointer;box-shadow:0 0 8px rgba(0,200,150,0.5)}
+.screen{animation:fadeIn 0.18s ease}
 @media print{
-  #monitor-panel,#app-header,#tab-bar{display:none!important}
-  #controls-panel{overflow:visible!important;height:auto!important}
-  .no-print{display:none!important}
-  #print-area,#cert-area{border:none!important;padding:0!important;box-shadow:none!important}
+  #app-header,#home-screen,#nav-back{display:none!important}
+  #print-area,#cert-area{border:none!important;padding:0!important}
 }
 </style>
 </head>
-<body style="background:#07090F">
+<body>
 <div id="root"></div>
 <script type="text/babel">
 const { useState, useEffect, useRef, useMemo } = React;
@@ -60,588 +59,691 @@ const PROGRAMS = [
   { id:'hipox',   label:'Hipoxemia',       hr:80,  spo2:74, sys:110, dia:70,  temp:36.5, resp:32, rhythm:'sinusal',   color:'#E63946' },
   { id:'fiebre',  label:'Fiebre alta',     hr:100, spo2:96, sys:135, dia:88,  temp:39.9, resp:22, rhythm:'sinusal',   color:'#F5A623' },
 ];
-
 const RHYTHM_INFO = {
-  sinusal:   { label:'Ritmo sinusal',          color:'#00C896' },
-  afib:      { label:'Fibrilación auricular',  color:'#F5A623' },
-  flutter:   { label:'Flutter auricular',      color:'#F5A623' },
-  vtach:     { label:'Taquicardia ventricular',color:'#E63946' },
-  vfib:      { label:'Fibrilación ventricular',color:'#C1121F' },
-  asistolia: { label:'Asistolia',              color:'#C1121F' },
-  marcap:    { label:'Marcapasos',             color:'#9B59B6' },
+  sinusal:{label:'Ritmo sinusal',color:'#00C896'},
+  afib:{label:'Fibrilación auricular',color:'#F5A623'},
+  flutter:{label:'Flutter auricular',color:'#F5A623'},
+  vtach:{label:'Taquicardia ventricular',color:'#E63946'},
+  vfib:{label:'Fibrilación ventricular',color:'#C1121F'},
+  asistolia:{label:'Asistolia',color:'#C1121F'},
+  marcap:{label:'Marcapasos',color:'#9B59B6'},
 };
-
 const SPO2_BRANDS = {
-  nellcor:{ label:'Nellcor OxiMax', color:'#3A86FF', connector:'Proprietary D-sub 9-pin', detect:'SRC resistor: 10kΩ adulto / 4.7kΩ pediátrico / 0Ω neonato', notes:'Protocolo OxiMax. Rango 70–100%. Respuesta 3–15s.', hw:'Incluir R_SRC entre pins 3-5.' },
-  bci:    { label:'BCI / Smiths',   color:'#9B59B6', connector:'Straight plug 9-pin',      detect:'Continuidad (sin resistor específico)',                        notes:'Algoritmo simple. Rango 70–100%.',                hw:'Cortocircuito en pins de detección.' },
-  masimo: { label:'Masimo LNOP',    color:'#F5A623', connector:'LNOP (propietario)',        detect:'Resistor ID en cable LNOP',                                   notes:'Tecnología SET®. Tolerante al movimiento.',       hw:'Medir R_ID de sonda original.' },
+  nellcor:{label:'Nellcor OxiMax',color:'#3A86FF',detect:'SRC resistor: 10kΩ adulto / 4.7kΩ pediátrico',notes:'Rango 70–100%. Respuesta 3–15s.',hw:'Incluir R_SRC entre pins 3-5.'},
+  bci:{label:'BCI / Smiths',color:'#9B59B6',detect:'Continuidad (sin resistor específico)',notes:'Algoritmo simple. Rango 70–100%.',hw:'Cortocircuito en pins de detección.'},
+  masimo:{label:'Masimo LNOP',color:'#F5A623',detect:'Resistor ID en cable LNOP',notes:'Tecnología SET®. Tolerante al movimiento.',hw:'Medir R_ID de sonda original.'},
 };
-
-const defaultInstrument = { marca:'', modelo:'', serie:'', cert:'', trazabilidad:'INTI / Red OAA' };
-const defaultCalParam = { offset:0, gain:1, applied:false, points:[], instrument:{...defaultInstrument}, date:'', nextDate:'', tecnico:'' };
-const defaultCal = { nibp:{ ...defaultCalParam }, temp:{ ...defaultCalParam }, ecg:{ ...defaultCalParam }, spo2:{ ...defaultCalParam } };
+const PARAM_CFG={
+  nibp:{label:'Presión (NIBP)',unit:'mmHg',tipo:'offset',norma:'AAMI SP10',tol:2,nomLabel:'Nominal (mmHg)',refLabel:'Referencia patrón (mmHg)'},
+  temp:{label:'Temperatura',unit:'°C',tipo:'offset',norma:'IEC 60601-2-56',tol:0.2,nomLabel:'Nominal (°C)',refLabel:'Referencia patrón (°C)',step:0.01},
+  ecg:{label:'ECG Amplitud',unit:'mV',tipo:'gain',norma:'IEC 60601-2-25',tol:0.05,nomLabel:'Nominal (mV)',refLabel:'Medido instrumento (mV)',step:0.01},
+  spo2:{label:'SpO₂',unit:'%',tipo:'offset',norma:'ISO 9919',tol:2,nomLabel:'Nominal (%)',refLabel:'Referencia patrón (%)'},
+};
+const defaultInstr={marca:'',modelo:'',serie:'',cert:'',trazabilidad:'INTI / Red OAA'};
+const defaultCalP={offset:0,gain:1,applied:false,points:[],instrument:{...defaultInstr},date:'',nextDate:'',tecnico:''};
+const defaultCal={nibp:{...defaultCalP},temp:{...defaultCalP},ecg:{...defaultCalP},spo2:{...defaultCalP}};
 
 // ══════════════════════════════════════════════════════
-// ECG WAVEFORMS
+// ECG MATH
 // ══════════════════════════════════════════════════════
-function gauss(x,c,w,a){ return a*Math.exp(-Math.pow((x-c)/w,2)); }
-
-function ecgSinusal(p){ return gauss(p,0.080,0.024,0.14)+gauss(p,0.192,0.007,-0.12)+gauss(p,0.208,0.011,1.00)+gauss(p,0.226,0.007,-0.28)+gauss(p,0.420,0.068,0.27); }
-function ecgAfib(p){ const f=0.030*Math.sin(p*Math.PI*14)+0.018*Math.sin(p*Math.PI*23+0.9)+0.012*Math.sin(p*Math.PI*34+2.0); return f+gauss(p,0.192,0.007,-0.12)+gauss(p,0.208,0.011,1.00)+gauss(p,0.226,0.007,-0.28)+gauss(p,0.420,0.062,0.22); }
-function ecgFlutter(p){ const f=0.15*Math.sin(p*Math.PI*4-0.5)+0.08*Math.sin(p*Math.PI*8); return f+gauss(p,0.208,0.011,0.90)+gauss(p,0.226,0.007,-0.25)+gauss(p,0.420,0.060,0.20); }
-function ecgVtach(p){ return gauss(p,0.18,0.025,-0.22)+gauss(p,0.26,0.028,0.88)+gauss(p,0.34,0.022,-0.48)+gauss(p,0.52,0.090,-0.20); }
-function ecgMarcap(p){ const s=(p>=0.17&&p<0.178)?2.0:0; return s+gauss(p,0.22,0.022,0.72)+gauss(p,0.30,0.018,-0.38)+gauss(p,0.50,0.080,-0.18); }
-
-function calSignal(phase,mode,amp){
-  switch(mode){
-    case 'cuadrada':  return phase<0.5?amp:0;
-    case 'senoidal':  return amp*Math.sin(phase*2*Math.PI);
-    case 'triangular':
-      if(phase<0.25) return amp*(phase/0.25);
-      if(phase<0.75) return amp*(1-(phase-0.25)/0.25);
-      return amp*(-1+(phase-0.75)/0.25);
-    default: return 0;
-  }
+function gauss(x,c,w,a){return a*Math.exp(-Math.pow((x-c)/w,2));}
+function ecgSinusal(p){return gauss(p,.080,.024,.14)+gauss(p,.192,.007,-.12)+gauss(p,.208,.011,1)+gauss(p,.226,.007,-.28)+gauss(p,.420,.068,.27);}
+function ecgAfib(p){const f=.030*Math.sin(p*Math.PI*14)+.018*Math.sin(p*Math.PI*23+.9)+.012*Math.sin(p*Math.PI*34+2);return f+gauss(p,.192,.007,-.12)+gauss(p,.208,.011,1)+gauss(p,.226,.007,-.28)+gauss(p,.420,.062,.22);}
+function ecgFlutter(p){return .15*Math.sin(p*Math.PI*4-.5)+.08*Math.sin(p*Math.PI*8)+gauss(p,.208,.011,.9)+gauss(p,.226,.007,-.25)+gauss(p,.420,.06,.2);}
+function ecgVtach(p){return gauss(p,.18,.025,-.22)+gauss(p,.26,.028,.88)+gauss(p,.34,.022,-.48)+gauss(p,.52,.09,-.2);}
+function ecgMarcap(p){return (p>=.17&&p<.178?2:0)+gauss(p,.22,.022,.72)+gauss(p,.30,.018,-.38)+gauss(p,.50,.08,-.18);}
+function calSignal(ph,mode,amp){
+  if(mode==='cuadrada') return ph<.5?amp:0;
+  if(mode==='senoidal') return amp*Math.sin(ph*2*Math.PI);
+  if(mode==='triangular'){if(ph<.25)return amp*(ph/.25);if(ph<.75)return amp*(1-(ph-.25)/.25);return amp*(-1+(ph-.75)/.25);}
+  return 0;
 }
-
-function getECGSample(phase, rhythm, mode, amp, stMV){
-  if(mode!=='cardiaco') return calSignal(phase,mode,amp);
-  let base;
+function getECG(ph,rhythm,mode,amp,st){
+  if(mode!=='cardiaco') return calSignal(ph,mode,amp);
+  let b;
   switch(rhythm){
-    case 'sinusal':   base=ecgSinusal(phase)*amp; break;
-    case 'afib':      base=ecgAfib(phase)*amp; break;
-    case 'flutter':   base=ecgFlutter(phase)*amp; break;
-    case 'vtach':     base=ecgVtach(phase)*amp; break;
-    case 'vfib':      return (Math.random()-0.5)*1.4*amp;
-    case 'asistolia': return 0;
-    case 'marcap':    base=ecgMarcap(phase)*amp; break;
-    default:          base=ecgSinusal(phase)*amp;
+    case 'sinusal':b=ecgSinusal(ph)*amp;break;
+    case 'afib':b=ecgAfib(ph)*amp;break;
+    case 'flutter':b=ecgFlutter(ph)*amp;break;
+    case 'vtach':b=ecgVtach(ph)*amp;break;
+    case 'vfib':return(Math.random()-.5)*1.4*amp;
+    case 'asistolia':return 0;
+    case 'marcap':b=ecgMarcap(ph)*amp;break;
+    default:b=ecgSinusal(ph)*amp;
   }
-  if(stMV!==0&&rhythm!=='vfib'&&rhythm!=='asistolia'){
-    if(phase>0.235&&phase<0.385){
-      const fade=Math.min(1,Math.min((phase-0.235)/0.025,(0.385-phase)/0.025));
-      base+=stMV*fade;
-    }
-  }
-  return base;
+  if(st!==0&&rhythm!=='vfib'&&rhythm!=='asistolia'&&ph>.235&&ph<.385)
+    b+=st*Math.min(1,Math.min((ph-.235)/.025,(.385-ph)/.025));
+  return b;
 }
-
-function getPleth(p, rhythm, spo2){
-  if(rhythm==='vfib'||rhythm==='asistolia') return 0;
-  let v;
-  if(p<0.28) v=Math.pow(Math.sin((p/0.28)*Math.PI/2),2);
-  else v=Math.pow(Math.cos(((p-0.28)/0.72)*Math.PI/2),1.5)*0.38;
+function getPleth(p,rhythm,spo2){
+  if(rhythm==='vfib'||rhythm==='asistolia')return 0;
+  let v=p<.28?Math.pow(Math.sin((p/.28)*Math.PI/2),2):Math.pow(Math.cos(((p-.28)/.72)*Math.PI/2),1.5)*.38;
   return v*(spo2/100);
 }
 
 // ══════════════════════════════════════════════════════
 // CANVAS
 // ══════════════════════════════════════════════════════
-function drawWave(canvas, buf, color, label, yMin, yMax){
+function drawWave(canvas,buf,color,label,yMin,yMax){
   const ctx=canvas.getContext('2d');
-  const W=canvas.width,H=canvas.height;
-  const pL=4,pR=4,pT=5,pB=14,pH=H-pT-pB,pW=W-pL-pR;
-  ctx.fillStyle='#07090F'; ctx.fillRect(0,0,W,H);
-  ctx.strokeStyle='rgba(255,255,255,0.035)'; ctx.lineWidth=1;
+  const W=canvas.width,H=canvas.height,pL=4,pR=4,pT=4,pB=12;
+  const pH=H-pT-pB,pW=W-pL-pR;
+  ctx.fillStyle='#07090F';ctx.fillRect(0,0,W,H);
+  ctx.strokeStyle='rgba(255,255,255,0.04)';ctx.lineWidth=1;
   for(let i=1;i<4;i++){const y=pT+(i/4)*pH;ctx.beginPath();ctx.moveTo(pL,y);ctx.lineTo(W-pR,y);ctx.stroke();}
   for(let i=1;i<8;i++){const x=pL+(i/8)*pW;ctx.beginPath();ctx.moveTo(x,pT);ctx.lineTo(x,pT+pH);ctx.stroke();}
-  ctx.fillStyle=`${color}66`; ctx.font='8px Space Mono,monospace'; ctx.textAlign='left'; ctx.fillText(label,pL+3,H-3);
+  ctx.fillStyle=color+'66';ctx.font='8px Space Mono,monospace';ctx.textAlign='left';ctx.fillText(label,pL+3,H-3);
   if(buf.length<2)return;
   const sy=v=>pT+pH*(1-(v-yMin)/(yMax-yMin));
-  ctx.save(); ctx.shadowBlur=9; ctx.shadowColor=color; ctx.strokeStyle=color; ctx.lineWidth=1.8; ctx.lineJoin='round'; ctx.beginPath();
-  buf.forEach((v,i)=>{ const x=pL+i,y=Math.max(pT,Math.min(pT+pH,sy(v))); i===0?ctx.moveTo(x,y):ctx.lineTo(x,y); });
-  ctx.stroke(); ctx.restore();
-  if(buf.length>0){
-    const hx=pL+buf.length-1,hy=Math.max(pT,Math.min(pT+pH,sy(buf[buf.length-1])));
-    ctx.save(); ctx.beginPath(); ctx.arc(hx,hy,2.5,0,Math.PI*2); ctx.fillStyle='#fff'; ctx.shadowBlur=10; ctx.shadowColor=color; ctx.fill(); ctx.restore();
-  }
+  ctx.save();ctx.shadowBlur=9;ctx.shadowColor=color;ctx.strokeStyle=color;ctx.lineWidth=2;ctx.lineJoin='round';ctx.beginPath();
+  buf.forEach((v,i)=>{const x=pL+i,y=Math.max(pT,Math.min(pT+pH,sy(v)));i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);});
+  ctx.stroke();ctx.restore();
+  if(buf.length>0){const hx=pL+buf.length-1,hy=Math.max(pT,Math.min(pT+pH,sy(buf[buf.length-1])));ctx.save();ctx.beginPath();ctx.arc(hx,hy,3,0,Math.PI*2);ctx.fillStyle='#fff';ctx.shadowBlur=10;ctx.shadowColor=color;ctx.fill();ctx.restore();}
 }
 
-function WaveCanvas({vitals,rhythm,running,type,ecgMode,amplitude,stOffset}){
-  const canvasRef=useRef(null);
-  const buf=useRef([]),phase=useRef(Math.random()*0.3),rr=useRef(1.0),lastT=useRef(null),raf=useRef(null);
+function WaveCanvas({vitals,rhythm,running,type,ecgMode,amplitude,stOffset,h}){
+  const canvasRef=useRef(null),buf=useRef([]),phase=useRef(Math.random()*.3),rr=useRef(1),lastT=useRef(null),raf=useRef(null);
   const p=useRef({vitals,rhythm,running,ecgMode,amplitude,stOffset});
   useEffect(()=>{p.current={vitals,rhythm,running,ecgMode,amplitude,stOffset};},[vitals,rhythm,running,ecgMode,amplitude,stOffset]);
   useEffect(()=>{
-    const canvas=canvasRef.current; if(!canvas)return;
+    const canvas=canvasRef.current;if(!canvas)return;
     const loop=()=>{
       const{vitals,rhythm,running,ecgMode,amplitude,stOffset}=p.current;
-      const now=performance.now();
-      if(!lastT.current)lastT.current=now;
-      const dt=Math.min((now-lastT.current)/1000,0.05); lastT.current=now;
+      const now=performance.now();if(!lastT.current)lastT.current=now;
+      const dt=Math.min((now-lastT.current)/1000,.05);lastT.current=now;
       const pW=canvas.width-8;
       if(running){
-        const hr=Math.max(1,vitals.hr||60),ct=60/hr;
+        const ct=60/Math.max(1,vitals.hr||60);
         phase.current+=dt/(rr.current*ct);
-        if(phase.current>=1){
-          phase.current-=1;
-          rr.current=rhythm==='afib'?(0.60+Math.random()*0.80):rhythm==='flutter'?0.5:1.0;
-        }
-        const v=type==='ecg'?getECGSample(phase.current,rhythm,ecgMode,amplitude,stOffset):getPleth(phase.current,rhythm,vitals.spo2);
-        buf.current.push(v);
-      } else { buf.current.push(0); }
-      if(buf.current.length>pW) buf.current.shift();
-      if(type==='ecg'){
-        const yMax=2.6*amplitude+0.3,yMin=-0.5*amplitude-0.1;
-        const col=ecgMode!=='cardiaco'?'#F5A623':'#00C896';
-        const lbl=ecgMode!=='cardiaco'?`CAL ${ecgMode.toUpperCase()}`:'ECG II';
-        drawWave(canvas,buf.current,col,lbl,yMin,yMax);
-      } else {
-        const c=vitals.spo2<90?'#E63946':vitals.spo2<95?'#F5A623':'#00BFFF';
-        drawWave(canvas,buf.current,c,'PLETH',-0.05,1.05);
-      }
+        if(phase.current>=1){phase.current-=1;rr.current=rhythm==='afib'?(.6+Math.random()*.8):rhythm==='flutter'?.5:1;}
+        buf.current.push(type==='ecg'?getECG(phase.current,rhythm,ecgMode,amplitude,stOffset):getPleth(phase.current,rhythm,vitals.spo2));
+      } else buf.current.push(0);
+      if(buf.current.length>pW)buf.current.shift();
+      if(type==='ecg'){const col=ecgMode!=='cardiaco'?'#F5A623':'#00C896';drawWave(canvas,buf.current,col,ecgMode!=='cardiaco'?`CAL ${ecgMode.toUpperCase()}`:'ECG II',-0.5*amplitude-.1,2.6*amplitude+.3);}
+      else{const c=vitals.spo2<90?'#E63946':vitals.spo2<95?'#F5A623':'#00BFFF';drawWave(canvas,buf.current,c,'PLETH',-.05,1.05);}
       raf.current=requestAnimationFrame(loop);
     };
     raf.current=requestAnimationFrame(loop);
     return()=>{cancelAnimationFrame(raf.current);lastT.current=null;};
   },[type]);
-  const h=type==='ecg'?110:72;
-  return <canvas ref={canvasRef} width={540} height={h} style={{width:'100%',height:h+'px',display:'block'}}/>;
+  const ch=h||100;
+  return<canvas ref={canvasRef} width={540} height={ch} style={{width:'100%',height:ch+'px',display:'block'}}/>;
 }
 
 // ══════════════════════════════════════════════════════
-// READOUT
+// UI ATOMS
 // ══════════════════════════════════════════════════════
-function Readout({label,value,unit,color,alarm,calActive}){
+function Readout({label,value,unit,color,alarm,small,cal}){
   return(
-    <div style={{background:'rgba(0,0,0,0.45)',border:`1px solid ${alarm?color+'60':'rgba(255,255,255,0.07)'}`,borderRadius:6,padding:'8px 6px',textAlign:'center',position:'relative'}}>
-      {calActive&&<span style={{position:'absolute',top:3,right:4,fontFamily:'Space Mono,monospace',fontSize:7,color:'#F5A623',letterSpacing:'0.05em'}}>CAL</span>}
-      <div style={{fontFamily:'Space Mono,monospace',fontSize:28,fontWeight:700,color,textShadow:`0 0 12px ${color}70`,lineHeight:1,letterSpacing:-1}}>{value}</div>
-      <div style={{fontFamily:'Space Mono,monospace',fontSize:8,color:color+'70',letterSpacing:'0.1em',marginTop:3}}>{label}</div>
-      <div style={{fontFamily:'Space Mono,monospace',fontSize:8,color:'rgba(255,255,255,0.18)',marginTop:1}}>{unit}</div>
+    <div style={{background:'rgba(0,0,0,0.5)',border:`1px solid ${alarm?color+'80':'rgba(255,255,255,0.07)'}`,borderRadius:6,padding:small?'6px 4px':'9px 6px',textAlign:'center',position:'relative'}}>
+      {cal&&<span style={{position:'absolute',top:2,right:3,fontFamily:'Space Mono,monospace',fontSize:6,color:'#F5A623'}}>CAL</span>}
+      <div style={{fontFamily:'Space Mono,monospace',fontSize:small?18:26,fontWeight:700,color,textShadow:`0 0 10px ${color}70`,lineHeight:1,letterSpacing:-1}}>{value}</div>
+      <div style={{fontFamily:'Space Mono,monospace',fontSize:7,color:color+'70',letterSpacing:'0.08em',marginTop:2}}>{label}</div>
+      <div style={{fontFamily:'Space Mono,monospace',fontSize:7,color:'rgba(255,255,255,0.2)',marginTop:1}}>{unit}</div>
+    </div>
+  );
+}
+
+// Sección desplegable
+function Sec({icon,title,color,defaultOpen,children}){
+  const [open,setOpen]=useState(defaultOpen??false);
+  return(
+    <div style={{borderBottom:'1px solid #E2E8F0'}}>
+      <button onClick={()=>setOpen(!open)} style={{width:'100%',padding:'14px 16px',display:'flex',justifyContent:'space-between',alignItems:'center',background:'white',border:'none',cursor:'pointer',textAlign:'left'}}>
+        <div style={{display:'flex',alignItems:'center',gap:10}}>
+          {icon&&<span style={{fontSize:18}}>{icon}</span>}
+          <span style={{fontWeight:600,fontSize:14,color:color||'#1A2535'}}>{title}</span>
+        </div>
+        <span style={{color:'#aaa',fontSize:12,transform:open?'rotate(180deg)':'none',transition:'transform 0.2s',flexShrink:0}}>▼</span>
+      </button>
+      {open&&<div style={{padding:'4px 16px 16px',animation:'fadeIn 0.15s ease'}}>{children}</div>}
+    </div>
+  );
+}
+
+const INP={padding:'8px 10px',border:'1px solid #E2E8F0',borderRadius:6,fontSize:13,fontFamily:'Space Mono,monospace',outline:'none',width:'100%'};
+const LBL={fontSize:11,color:'#5A6B7E',fontWeight:500,display:'block',marginBottom:3};
+
+// Slider row
+function SliderRow({label,value,min,max,step,unit,onChange}){
+  return(
+    <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:10}}>
+      <span style={{fontFamily:'Space Mono,monospace',fontSize:10,color:'#5A6B7E',width:36,flexShrink:0}}>{label}</span>
+      <input type="range" min={min} max={max} step={step} value={value} onChange={e=>onChange(step<1?parseFloat(e.target.value):Number(e.target.value))} style={{flex:1,accentColor:'#00C896'}}/>
+      <span style={{fontFamily:'Space Mono,monospace',fontSize:13,fontWeight:700,color:'#1A2535',width:60,textAlign:'right',flexShrink:0}}>
+        {step<1?Number(value).toFixed(1):value} <span style={{fontSize:9,color:'#aaa'}}>{unit}</span>
+      </span>
     </div>
   );
 }
 
 // ══════════════════════════════════════════════════════
-// WIFI
+// MONITOR DISPLAY (panel oscuro reutilizable)
 // ══════════════════════════════════════════════════════
-function WiFiPanel({vitals,rhythm,ecgMode,amplitude,stOffset}){
-  const [ip,setIp]=useState('192.168.4.1');
-  const [connected,setConnected]=useState(false);
-  const [status,setStatus]=useState('Sin conexión');
-  const ws=useRef(null),ref=useRef({vitals,rhythm,ecgMode,amplitude,stOffset});
-  useEffect(()=>{ref.current={vitals,rhythm,ecgMode,amplitude,stOffset};},[vitals,rhythm,ecgMode,amplitude,stOffset]);
-  const connect=()=>{
-    try{
-      const sock=new WebSocket(`ws://${ip}/ws`);
-      sock.onopen=()=>{setConnected(true);setStatus(`Conectado @ ${ip}`);};
-      sock.onclose=()=>{setConnected(false);setStatus('Desconectado');};
-      sock.onerror=()=>setStatus('Error de conexión');
-      ws.current=sock;
-      sock._iv=setInterval(()=>{ if(sock.readyState===WebSocket.OPEN) sock.send(JSON.stringify({...ref.current,ts:Date.now()})); },500);
-    }catch(e){setStatus('Error: '+e.message);}
-  };
-  const disconnect=()=>{ if(ws.current){clearInterval(ws.current._iv);ws.current.close();ws.current=null;} setConnected(false);setStatus('Sin conexión'); };
+function MonitorDisplay({cv,rhythm,running,ecgMode,amplitude,stOffset,cal,compact}){
+  const dead=rhythm==='vfib'||rhythm==='asistolia';
+  const ri=RHYTHM_INFO[rhythm]||RHYTHM_INFO.sinusal;
+  const hrC=dead?'#E63946':cv.hr<50?'#3A86FF':cv.hr>120?'#F5A623':'#00C896';
+  const spC=cv.spo2<90?'#E63946':cv.spo2<95?'#F5A623':'#00BFFF';
+  const nibpC=dead?'#E63946':cv.sys>=180?'#E63946':cv.sys>=140?'#F5A623':cv.sys<90?'#3A86FF':'#00C896';
+  const tmpC=cv.temp>=38.5?'#E63946':cv.temp>=37.5?'#F5A623':cv.temp<35.5?'#3A86FF':'#00C896';
+  const map=Math.round(cv.dia+(cv.sys-cv.dia)/3);
   return(
-    <div style={{background:'rgba(0,0,0,0.4)',border:'1px solid rgba(255,255,255,0.06)',borderRadius:6,padding:10}}>
-      <div style={{fontFamily:'Space Mono,monospace',fontSize:8,letterSpacing:'0.14em',color:'rgba(0,200,150,0.45)',marginBottom:8}}>ESP32 — WiFi</div>
-      <div style={{display:'flex',gap:6,alignItems:'center',marginBottom:5}}>
-        <div style={{width:7,height:7,borderRadius:'50%',background:connected?'#00C896':'#333',boxShadow:connected?'0 0 7px #00C896':'none',flexShrink:0}}/>
-        <input value={ip} onChange={e=>setIp(e.target.value)} disabled={connected}
-          style={{flex:1,background:'rgba(0,0,0,0.5)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:4,color:'rgba(0,200,150,0.85)',fontFamily:'Space Mono,monospace',fontSize:11,padding:'4px 7px',outline:'none'}}/>
-        <button onClick={connected?disconnect:connect}
-          style={{padding:'4px 10px',fontSize:10,fontFamily:'Space Mono,monospace',background:connected?'rgba(230,57,70,0.15)':'rgba(0,200,150,0.15)',color:connected?'#E63946':'#00C896',border:`1px solid ${connected?'#E63946':'#00C896'}`,borderRadius:4,cursor:'pointer'}}>
-          {connected?'DESCON.':'CONECT.'}
-        </button>
+    <div style={{background:'#07090F',padding:'10px 12px',display:'flex',flexDirection:'column',gap:8}}>
+      {/* Rhythm badge */}
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+        <span style={{fontFamily:'Space Mono,monospace',fontSize:8,color:'rgba(0,200,150,0.35)',letterSpacing:'0.12em',textTransform:'uppercase'}}>
+          {ecgMode!=='cardiaco'?`CAL ${ecgMode.toUpperCase()}`:'Lead II'}
+        </span>
+        <span style={{fontFamily:'Space Mono,monospace',fontSize:9,color:ri.color,border:`1px solid ${ri.color}40`,padding:'2px 8px',borderRadius:3,animation:dead?'blink 0.8s step-end infinite':'none'}}>
+          {ecgMode!=='cardiaco'?`${amplitude.toFixed(2)} mV`:ri.label}
+        </span>
       </div>
-      <div style={{fontFamily:'Space Mono,monospace',fontSize:9,color:'rgba(255,255,255,0.22)'}}>{status}</div>
+      {/* ECG */}
+      <WaveCanvas vitals={cv} rhythm={rhythm} running={running} type="ecg" ecgMode={ecgMode} amplitude={amplitude} stOffset={stOffset} h={compact?75:100}/>
+      {/* PLETH */}
+      {!compact&&<>
+        <div style={{fontFamily:'Space Mono,monospace',fontSize:8,color:'rgba(0,191,255,0.35)',letterSpacing:'0.1em'}}>PLETH — SpO₂</div>
+        <WaveCanvas vitals={cv} rhythm={rhythm} running={running} type="pleth" ecgMode={ecgMode} amplitude={amplitude} stOffset={stOffset} h={60}/>
+      </>}
+      {/* Readouts */}
+      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr 1fr',gap:5}}>
+        <Readout label="FC" value={dead?'---':cv.hr} unit="bpm" color={hrC} alarm={dead||cv.hr<50||cv.hr>120} small/>
+        <Readout label="SpO₂" value={dead?'---':cv.spo2} unit="%" color={spC} alarm={dead||cv.spo2<90} small cal={cal?.spo2?.applied}/>
+        <Readout label="RESP" value={dead?'---':cv.resp} unit="rpm" color="#00C896" small/>
+        <Readout label="TEMP" value={dead?'---':Number(cv.temp).toFixed(1)} unit="°C" color={tmpC} alarm={cv.temp>=38.5||cv.temp<35.5} small cal={cal?.temp?.applied}/>
+      </div>
+      {/* NIBP */}
+      <div style={{background:'rgba(0,0,0,0.5)',border:'1px solid rgba(255,255,255,0.07)',borderRadius:6,padding:'8px 12px',position:'relative'}}>
+        {cal?.nibp?.applied&&<span style={{position:'absolute',top:4,right:6,fontFamily:'Space Mono,monospace',fontSize:7,color:'#F5A623'}}>CAL</span>}
+        <div style={{fontFamily:'Space Mono,monospace',fontSize:26,fontWeight:700,color:nibpC,textShadow:`0 0 10px ${nibpC}70`,lineHeight:1,letterSpacing:-1}}>
+          {dead?'---':`${cv.sys}/${cv.dia}`}
+        </div>
+        <div style={{fontFamily:'Space Mono,monospace',fontSize:8,color:'rgba(255,255,255,0.22)',marginTop:2}}>
+          NIBP mmHg · MAP {dead?'---':map}
+          {stOffset!==0&&ecgMode==='cardiaco'&&<span style={{marginLeft:10,color:stOffset>0?'#F5A623':'#3A86FF'}}>· ST {stOffset>0?'+':''}{stOffset.toFixed(2)}mV</span>}
+        </div>
+      </div>
+      {/* Alarm bar */}
+      {(dead||(cv.sys>=180||cv.sys<90)||cv.spo2<90)&&(
+        <div style={{display:'flex',gap:4,flexWrap:'wrap'}}>
+          {dead&&<span style={{fontFamily:'Space Mono,monospace',fontSize:9,padding:'3px 8px',borderRadius:3,color:'#E63946',border:'1px solid #E63946',background:'rgba(230,57,70,0.1)',animation:'blink 0.7s step-end infinite'}}>⚠ {rhythm==='vfib'?'FIBRILACIÓN V.':'ASISTOLIA'}</span>}
+          {!dead&&cv.sys>=180&&<span style={{fontFamily:'Space Mono,monospace',fontSize:9,padding:'3px 8px',borderRadius:3,color:'#E63946',border:'1px solid #E63946'}}>HTA SEVERA</span>}
+          {!dead&&cv.sys<90&&<span style={{fontFamily:'Space Mono,monospace',fontSize:9,padding:'3px 8px',borderRadius:3,color:'#3A86FF',border:'1px solid #3A86FF'}}>HIPOTENSIÓN</span>}
+          {!dead&&cv.spo2<90&&<span style={{fontFamily:'Space Mono,monospace',fontSize:9,padding:'3px 8px',borderRadius:3,color:'#E63946',border:'1px solid #E63946'}}>SpO₂ BAJA</span>}
+        </div>
+      )}
     </div>
   );
 }
 
 // ══════════════════════════════════════════════════════
-// VERIFICACIÓN
+// HOME SCREEN — cards
 // ══════════════════════════════════════════════════════
-function calcStat(errors){
-  if(!errors.length)return null;
-  const m=errors.reduce((a,b)=>a+b,0)/errors.length;
-  const sd=Math.sqrt(errors.reduce((a,b)=>a+Math.pow(b-m,2),0)/errors.length);
-  return{mean:m,sd,passM:Math.abs(m)<=5,passSd:sd<=8,pass:Math.abs(m)<=5&&sd<=8};
+function HomeCard({icon,title,value,sub,color,onClick,badge}){
+  return(
+    <button onClick={onClick} style={{background:'#0E1A2B',border:`1px solid ${color}25`,borderRadius:12,padding:'16px 14px',textAlign:'left',cursor:'pointer',display:'flex',flexDirection:'column',gap:6,width:'100%',transition:'border-color 0.15s',WebkitTapHighlightColor:'transparent'}}>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start'}}>
+        <span style={{fontSize:22}}>{icon}</span>
+        {badge&&<span style={{fontFamily:'Space Mono,monospace',fontSize:8,padding:'2px 6px',borderRadius:3,background:`${color}22`,color:color}}>{badge}</span>}
+      </div>
+      <div>
+        <div style={{fontFamily:'Space Mono,monospace',fontSize:9,color:color,letterSpacing:'0.1em',textTransform:'uppercase',marginBottom:4}}>{title}</div>
+        <div style={{fontFamily:'Space Mono,monospace',fontSize:20,fontWeight:700,color:'white',lineHeight:1.1}}>{value}</div>
+        <div style={{fontSize:11,color:'rgba(255,255,255,0.35)',marginTop:5}}>{sub}</div>
+      </div>
+    </button>
+  );
 }
+
+function HomeScreen({cv,rhythm,running,ecgMode,amplitude,stOffset,cal,anyCal,setScreen}){
+  const dead=rhythm==='vfib'||rhythm==='asistolia';
+  const calCount=['nibp','temp','ecg','spo2'].filter(k=>cal[k].applied).length;
+  return(
+    <div className="screen" style={{display:'flex',flexDirection:'column',height:'100%',overflow:'hidden'}}>
+      {/* Mini monitor strip */}
+      <div style={{flexShrink:0}}>
+        <MonitorDisplay cv={cv} rhythm={rhythm} running={running} ecgMode={ecgMode} amplitude={amplitude} stOffset={stOffset} cal={cal} compact={true}/>
+      </div>
+      {/* Cards grid */}
+      <div style={{flex:1,overflow:'auto',padding:14,background:'#0B1520'}}>
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:10}}>
+          <HomeCard icon="🖥️" title="Monitor" value={dead?'---':`${cv.sys}/${cv.dia}`}
+            sub={`FC ${cv.hr} · SpO₂ ${cv.spo2}% · ${Number(cv.temp).toFixed(1)}°C`}
+            color="#00C896" onClick={()=>setScreen('monitor')}/>
+          <HomeCard icon="💧" title="Saturometría" value={dead?'---':`${cv.spo2}%`}
+            sub={`FC ${cv.hr} bpm · ${RHYTHM_INFO[rhythm]?.label||rhythm}`}
+            color="#00BFFF" onClick={()=>setScreen('spo2')}/>
+          <HomeCard icon="❤️" title="ECG" value={dead?'---':`${amplitude.toFixed(1)} mV`}
+            sub={ecgMode==='cardiaco'?`${RHYTHM_INFO[rhythm]?.label||rhythm}`:`Cal: ${ecgMode}`}
+            color="#00C896" onClick={()=>setScreen('ecg')}/>
+          <HomeCard icon="🔧" title="Calibración" value={`${calCount}/4`}
+            sub={calCount===4?'Todos calibrados':calCount===0?'Sin calibrar':'Calibración parcial'}
+            color="#F5A623" onClick={()=>setScreen('cal')} badge={anyCal?'ACTIVO':null}/>
+        </div>
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
+          <HomeCard icon="📋" title="Verificación" value="Medir"
+            sub="Registrar lecturas del equipo" color="#9B59B6" onClick={()=>setScreen('verif')}/>
+          <HomeCard icon="📄" title="Informe" value="Generar"
+            sub="Certificado de servicio" color="#6C8EBF" onClick={()=>setScreen('informe')}/>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════
+// MONITOR SCREEN
+// ══════════════════════════════════════════════════════
+function MonitorScreen({vitals,setV,cv,rhythm,setRhythm,running,ecgMode,amplitude,stOffset,cal,prog,setProg,applyProg,setScreen,ip,setIp}){
+  const dead=rhythm==='vfib'||rhythm==='asistolia';
+  const [wsStatus,setWsStatus]=useState('Sin conexión');
+  const [wsConn,setWsConn]=useState(false);
+  const ws=useRef(null),wsRef=useRef({cv,rhythm});
+  useEffect(()=>{wsRef.current={cv,rhythm};},[cv,rhythm]);
+  const connect=()=>{
+    try{const s=new WebSocket(`ws://${ip}/ws`);s.onopen=()=>{setWsConn(true);setWsStatus('Conectado');};s.onclose=()=>{setWsConn(false);setWsStatus('Desconectado');};s.onerror=()=>setWsStatus('Error');ws.current=s;s._iv=setInterval(()=>{if(s.readyState===WebSocket.OPEN)s.send(JSON.stringify({...wsRef.current,ts:Date.now()}));},500);}catch(e){setWsStatus('Error: '+e.message);}
+  };
+  const disconnect=()=>{if(ws.current){clearInterval(ws.current._iv);ws.current.close();ws.current=null;}setWsConn(false);setWsStatus('Sin conexión');};
+
+  return(
+    <div className="screen" style={{display:'flex',flexDirection:'column',height:'100%',overflow:'hidden'}}>
+      <div style={{flexShrink:0}}>
+        <MonitorDisplay cv={cv} rhythm={rhythm} running={running} ecgMode={ecgMode} amplitude={amplitude} stOffset={stOffset} cal={cal}/>
+      </div>
+      <div style={{flex:1,overflow:'auto',background:'#F2F4F7'}}>
+        <Sec icon="⚡" title="Programas clínicos" defaultOpen={true} color="#1A2535">
+          <div style={{display:'flex',flexWrap:'wrap',gap:6,paddingTop:4}}>
+            {PROGRAMS.map(p=>(<button key={p.id} onClick={()=>applyProg(p)} style={{padding:'6px 12px',fontSize:12,fontWeight:500,borderRadius:100,cursor:'pointer',border:prog===p.id?'none':'1px solid #E2E8F0',background:prog===p.id?p.color:'white',color:prog===p.id?'white':'#5A6B7E'}}>{p.label}</button>))}
+          </div>
+        </Sec>
+        <Sec icon="💓" title="Ritmo ECG">
+          <div style={{display:'flex',flexWrap:'wrap',gap:6,paddingTop:4}}>
+            {Object.entries(RHYTHM_INFO).map(([id,info])=>{
+              const sel=rhythm===id;const bg=sel?(id==='sinusal'?'#1B2A3B':id==='marcap'?'#9B59B6':['vfib','asistolia'].includes(id)?'#E63946':'#F5A623'):'white';
+              return<button key={id} onClick={()=>{setRhythm(id);setProg(null);}} style={{padding:'6px 12px',fontSize:12,fontWeight:500,borderRadius:100,cursor:'pointer',border:sel?'none':'1px solid #E2E8F0',background:bg,color:sel?'white':'#5A6B7E'}}>{info.label}</button>;
+            })}
+          </div>
+        </Sec>
+        <Sec icon="🎛️" title="Parámetros">
+          <div style={{paddingTop:8}}>
+            <SliderRow label="FC"   value={vitals.hr}   min={20}  max={200} step={1}   unit="bpm"  onChange={v=>setV('hr',v)}/>
+            <SliderRow label="SpO₂" value={vitals.spo2} min={50}  max={100} step={1}   unit="%"    onChange={v=>setV('spo2',v)}/>
+            <SliderRow label="SYS"  value={vitals.sys}  min={60}  max={260} step={1}   unit="mmHg" onChange={v=>setV('sys',v)}/>
+            <SliderRow label="DIA"  value={vitals.dia}  min={30}  max={160} step={1}   unit="mmHg" onChange={v=>setV('dia',v)}/>
+            <SliderRow label="TEMP" value={vitals.temp} min={32}  max={42}  step={0.1} unit="°C"   onChange={v=>setV('temp',v)}/>
+            <SliderRow label="RESP" value={vitals.resp} min={4}   max={60}  step={1}   unit="rpm"  onChange={v=>setV('resp',v)}/>
+          </div>
+        </Sec>
+        <Sec icon="📡" title="Conexión ESP32">
+          <div style={{paddingTop:8}}>
+            <div style={{display:'flex',gap:8,alignItems:'center',marginBottom:8}}>
+              <div style={{width:8,height:8,borderRadius:'50%',background:wsConn?'#00C896':'#555',boxShadow:wsConn?'0 0 6px #00C896':'none',flexShrink:0}}/>
+              <input value={ip} onChange={e=>setIp(e.target.value)} disabled={wsConn}
+                style={{flex:1,padding:'7px 10px',border:'1px solid #E2E8F0',borderRadius:6,fontSize:13,fontFamily:'Space Mono,monospace',outline:'none'}}/>
+              <button onClick={wsConn?disconnect:connect} style={{padding:'7px 14px',fontSize:12,background:wsConn?'#E63946':'#00C896',color:'white',border:'none',borderRadius:6,cursor:'pointer',fontWeight:600,flexShrink:0}}>
+                {wsConn?'Desconectar':'Conectar'}
+              </button>
+            </div>
+            <div style={{fontSize:11,color:'#5A6B7E'}}>{wsStatus}</div>
+          </div>
+        </Sec>
+      </div>
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════
+// SPO2 SCREEN
+// ══════════════════════════════════════════════════════
+function Spo2Screen({vitals,setV,cv,rhythm,setRhythm,running,ecgMode,amplitude,stOffset,cal,brand,setBrand}){
+  const dead=rhythm==='vfib'||rhythm==='asistolia';
+  const spC=cv.spo2<90?'#E63946':cv.spo2<95?'#F5A623':'#00BFFF';
+  const b=SPO2_BRANDS[brand];
+  return(
+    <div className="screen" style={{display:'flex',flexDirection:'column',height:'100%',overflow:'hidden'}}>
+      {/* SpO2 focused monitor */}
+      <div style={{background:'#07090F',padding:'12px',flexShrink:0}}>
+        <div style={{fontFamily:'Space Mono,monospace',fontSize:8,color:'rgba(0,191,255,0.4)',letterSpacing:'0.1em',marginBottom:6}}>PLETH — SpO₂</div>
+        <WaveCanvas vitals={cv} rhythm={rhythm} running={running} type="pleth" ecgMode={ecgMode} amplitude={amplitude} stOffset={stOffset} h={90}/>
+        <div style={{display:'grid',gridTemplateColumns:'2fr 1fr 1fr',gap:8,marginTop:10}}>
+          <div style={{background:'rgba(0,0,0,0.5)',border:'1px solid rgba(255,255,255,0.07)',borderRadius:8,padding:'10px 14px',textAlign:'center'}}>
+            <div style={{fontFamily:'Space Mono,monospace',fontSize:42,fontWeight:700,color:spC,textShadow:`0 0 14px ${spC}70`,lineHeight:1}}>{dead?'---':cv.spo2}</div>
+            <div style={{fontFamily:'Space Mono,monospace',fontSize:9,color:spC+'80',marginTop:3}}>SpO₂ %</div>
+          </div>
+          <Readout label="FC" value={dead?'---':cv.hr} unit="bpm" color="#00C896" alarm={dead||cv.hr<50||cv.hr>120}/>
+          <Readout label="RESP" value={dead?'---':cv.resp} unit="rpm" color="#00C896"/>
+        </div>
+        {(dead||cv.spo2<90)&&<div style={{marginTop:8,padding:'5px 10px',borderRadius:4,background:'rgba(230,57,70,0.1)',border:'1px solid #E63946',fontFamily:'Space Mono,monospace',fontSize:10,color:'#E63946',animation:dead?'blink 0.7s step-end infinite':'none'}}>
+          ⚠ {dead?'PARO CARDÍACO / FV':'SpO₂ BAJA — HIPOXEMIA'}
+        </div>}
+      </div>
+      {/* Controls */}
+      <div style={{flex:1,overflow:'auto',background:'#F2F4F7'}}>
+        <Sec icon="📱" title="Marca / Protocolo" defaultOpen={true}>
+          <div style={{display:'flex',gap:6,marginBottom:12,paddingTop:8}}>
+            {Object.entries(SPO2_BRANDS).map(([id,bb])=>(
+              <button key={id} onClick={()=>setBrand(id)} style={{flex:1,padding:'8px 6px',fontSize:11,fontWeight:600,borderRadius:8,cursor:'pointer',border:brand===id?'none':'1px solid #E2E8F0',background:brand===id?bb.color:'white',color:brand===id?'white':'#5A6B7E'}}>{bb.label}</button>
+            ))}
+          </div>
+          <div style={{background:'#F8F9FB',borderRadius:8,padding:12,fontSize:12,lineHeight:1.8}}>
+            <div><b>Conector:</b> {b.connector||'—'}</div>
+            <div><b>Detección:</b> {b.detect}</div>
+            <div><b>Algoritmo:</b> {b.notes}</div>
+            <div style={{marginTop:8,padding:'6px 10px',borderRadius:5,background:b.color+'15',border:`1px solid ${b.color}33`,color:b.color,fontSize:11,fontFamily:'Space Mono,monospace'}}>🔧 HW: {b.hw}</div>
+          </div>
+        </Sec>
+        <Sec icon="🎛️" title="Parámetros SpO₂ / FC">
+          <div style={{paddingTop:8}}>
+            <SliderRow label="SpO₂" value={vitals.spo2} min={50} max={100} step={1} unit="%" onChange={v=>setV('spo2',v)}/>
+            <SliderRow label="FC"   value={vitals.hr}   min={20} max={200} step={1} unit="bpm" onChange={v=>setV('hr',v)}/>
+            <SliderRow label="RESP" value={vitals.resp} min={4}  max={60}  step={1} unit="rpm" onChange={v=>setV('resp',v)}/>
+          </div>
+        </Sec>
+        <Sec icon="💓" title="Ritmo cardíaco">
+          <div style={{display:'flex',flexWrap:'wrap',gap:6,paddingTop:8}}>
+            {Object.entries(RHYTHM_INFO).map(([id,info])=>{
+              const sel=rhythm===id;const bg=sel?(id==='sinusal'?'#1B2A3B':id==='marcap'?'#9B59B6':['vfib','asistolia'].includes(id)?'#E63946':'#F5A623'):'white';
+              return<button key={id} onClick={()=>setRhythm(id)} style={{padding:'6px 12px',fontSize:11,fontWeight:500,borderRadius:100,cursor:'pointer',border:sel?'none':'1px solid #E2E8F0',background:bg,color:sel?'white':'#5A6B7E'}}>{info.label}</button>;
+            })}
+          </div>
+        </Sec>
+      </div>
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════
+// ECG SCREEN
+// ══════════════════════════════════════════════════════
+function EcgScreen({vitals,setV,cv,rhythm,setRhythm,running,ecgMode,setEcgMode,amplitude,setAmplitude,stOffset,setStOffset,cal,prog,setProg,applyProg}){
+  return(
+    <div className="screen" style={{display:'flex',flexDirection:'column',height:'100%',overflow:'hidden'}}>
+      <div style={{background:'#07090F',padding:'12px',flexShrink:0}}>
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:6}}>
+          <span style={{fontFamily:'Space Mono,monospace',fontSize:8,color:'rgba(0,200,150,0.4)',letterSpacing:'0.1em',textTransform:'uppercase'}}>
+            {ecgMode==='cardiaco'?'ECG Lead II':`Señal calibración — ${ecgMode}`}
+          </span>
+          <span style={{fontFamily:'Space Mono,monospace',fontSize:9,color:RHYTHM_INFO[rhythm]?.color||'#00C896',border:`1px solid ${RHYTHM_INFO[rhythm]?.color||'#00C896'}40`,padding:'2px 8px',borderRadius:3}}>
+            {ecgMode!=='cardiaco'?`${amplitude.toFixed(2)} mV`:RHYTHM_INFO[rhythm]?.label}
+          </span>
+        </div>
+        <WaveCanvas vitals={cv} rhythm={rhythm} running={running} type="ecg" ecgMode={ecgMode} amplitude={amplitude} stOffset={stOffset} h={110}/>
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:6,marginTop:10}}>
+          <div style={{background:'rgba(0,0,0,0.5)',border:'1px solid rgba(255,255,255,0.07)',borderRadius:6,padding:'8px',textAlign:'center'}}>
+            <div style={{fontFamily:'Space Mono,monospace',fontSize:18,fontWeight:700,color:'#00C896',lineHeight:1}}>{amplitude.toFixed(2)}</div>
+            <div style={{fontFamily:'Space Mono,monospace',fontSize:7,color:'rgba(0,200,150,0.6)',marginTop:2}}>AMPLITUD</div>
+            <div style={{fontFamily:'Space Mono,monospace',fontSize:7,color:'rgba(255,255,255,0.2)'}}>mV</div>
+          </div>
+          <div style={{background:'rgba(0,0,0,0.5)',border:`1px solid ${stOffset!==0?(stOffset>0?'rgba(245,166,35,0.4)':'rgba(58,134,255,0.4)'):'rgba(255,255,255,0.07)'}`,borderRadius:6,padding:'8px',textAlign:'center'}}>
+            <div style={{fontFamily:'Space Mono,monospace',fontSize:18,fontWeight:700,color:stOffset>0?'#F5A623':stOffset<0?'#3A86FF':'#00C896',lineHeight:1}}>{stOffset>0?'+':''}{stOffset.toFixed(2)}</div>
+            <div style={{fontFamily:'Space Mono,monospace',fontSize:7,color:'rgba(0,200,150,0.6)',marginTop:2}}>SEG. ST</div>
+            <div style={{fontFamily:'Space Mono,monospace',fontSize:7,color:'rgba(255,255,255,0.2)'}}>mV</div>
+          </div>
+          <Readout label="FC" value={cv.hr} unit="bpm" color="#00C896" small/>
+        </div>
+      </div>
+      <div style={{flex:1,overflow:'auto',background:'#F2F4F7'}}>
+        <Sec icon="🔧" title="Señal de calibración" defaultOpen={true}>
+          <div style={{paddingTop:8}}>
+            <div style={{fontSize:11,color:'#5A6B7E',fontWeight:500,marginBottom:8}}>Tipo de señal</div>
+            <div style={{display:'flex',gap:6,flexWrap:'wrap',marginBottom:14}}>
+              {[['cardiaco','❤ Cardíaco','#00C896'],['cuadrada','⬜ Cuadrada','#F5A623'],['senoidal','〜 Senoidal','#3A86FF'],['triangular','△ Triangular','#9B59B6']].map(([id,lbl,col])=>(
+                <button key={id} onClick={()=>setEcgMode(id)} style={{padding:'7px 14px',fontSize:12,fontWeight:500,borderRadius:8,cursor:'pointer',border:ecgMode===id?'none':'1px solid #E2E8F0',background:ecgMode===id?col:'white',color:ecgMode===id?'white':'#5A6B7E'}}>{lbl}</button>
+              ))}
+            </div>
+            <div style={{fontSize:11,color:'#5A6B7E',fontWeight:500,marginBottom:4}}>
+              Amplitud: <b style={{color:'#1A2535'}}>{amplitude.toFixed(2)} mV</b>
+              {cal.ecg.applied&&<span style={{fontSize:10,color:'#F5A623',marginLeft:6}}>→ {(amplitude*cal.ecg.gain).toFixed(2)} mV (cal)</span>}
+            </div>
+            <input type="range" min={0.1} max={2.0} step={0.05} value={amplitude} onChange={e=>setAmplitude(parseFloat(e.target.value))} style={{marginBottom:4}}/>
+            <div style={{display:'flex',justifyContent:'space-between',fontSize:10,color:'#aaa',marginBottom:14}}><span>0.1</span><span style={{color:'#00C896',fontWeight:600}}>1.0 mV estándar</span><span>2.0</span></div>
+          </div>
+        </Sec>
+        {ecgMode==='cardiaco'&&<Sec icon="📈" title="Segmento ST">
+          <div style={{paddingTop:8}}>
+            <div style={{fontSize:11,color:'#5A6B7E',fontWeight:500,marginBottom:4}}>
+              ST: <b style={{color:stOffset>0?'#F5A623':stOffset<0?'#3A86FF':'#00C896'}}>{stOffset>0?'+':''}{stOffset.toFixed(2)} mV</b>
+              {stOffset!==0&&<span style={{fontSize:10,color:stOffset>0?'#F5A623':'#3A86FF',marginLeft:6}}>{stOffset>0?'↑ elevación':'↓ depresión'}</span>}
+            </div>
+            <input type="range" min={-0.5} max={0.5} step={0.05} value={stOffset} onChange={e=>setStOffset(parseFloat(e.target.value))} style={{accentColor:stOffset>0?'#F5A623':stOffset<0?'#3A86FF':'#64748b',marginBottom:4}}/>
+            <div style={{display:'flex',justifyContent:'space-between',fontSize:10,color:'#aaa',marginBottom:10}}>
+              <span style={{color:'#3A86FF'}}>-0.5 depresión</span><span>0</span><span style={{color:'#F5A623'}}>+0.5 elevación</span>
+            </div>
+            {stOffset!==0&&<div style={{padding:'6px 10px',borderRadius:5,background:stOffset>0?'rgba(245,166,35,0.08)':'rgba(58,134,255,0.08)',border:`1px solid ${stOffset>0?'rgba(245,166,35,0.3)':'rgba(58,134,255,0.3)'}`,fontSize:11,color:stOffset>0?'#F5A623':'#3A86FF',marginBottom:8}}>
+              {stOffset>0?`ST +${stOffset.toFixed(2)} mV — posible isquemia / infarto`:`ST ${stOffset.toFixed(2)} mV — isquemia subendocárdica`}
+            </div>}
+            <button onClick={()=>setStOffset(0)} style={{padding:'5px 12px',fontSize:11,background:'none',border:'1px solid #E2E8F0',borderRadius:6,cursor:'pointer',color:'#5A6B7E'}}>↺ Reset ST</button>
+          </div>
+        </Sec>}
+        <Sec icon="💓" title="Ritmo ECG">
+          <div style={{display:'flex',flexWrap:'wrap',gap:6,paddingTop:8}}>
+            {Object.entries(RHYTHM_INFO).map(([id,info])=>{
+              const sel=rhythm===id;const bg=sel?(id==='sinusal'?'#1B2A3B':id==='marcap'?'#9B59B6':['vfib','asistolia'].includes(id)?'#E63946':'#F5A623'):'white';
+              return<button key={id} onClick={()=>setRhythm(id)} style={{padding:'6px 12px',fontSize:11,fontWeight:500,borderRadius:100,cursor:'pointer',border:sel?'none':'1px solid #E2E8F0',background:bg,color:sel?'white':'#5A6B7E'}}>{info.label}</button>;
+            })}
+          </div>
+        </Sec>
+        <Sec icon="⚡" title="Programas clínicos">
+          <div style={{display:'flex',flexWrap:'wrap',gap:6,paddingTop:8}}>
+            {PROGRAMS.map(p=>(<button key={p.id} onClick={()=>applyProg(p)} style={{padding:'6px 12px',fontSize:11,fontWeight:500,borderRadius:100,cursor:'pointer',border:prog===p.id?'none':'1px solid #E2E8F0',background:prog===p.id?p.color:'white',color:prog===p.id?'white':'#5A6B7E'}}>{p.label}</button>))}
+          </div>
+        </Sec>
+      </div>
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════
+// CALIBRACIÓN, VERIFICACIÓN, INFORME (igual que antes)
+// ══════════════════════════════════════════════════════
+function calcStat(errors){if(!errors.length)return null;const m=errors.reduce((a,b)=>a+b,0)/errors.length;const sd=Math.sqrt(errors.reduce((a,b)=>a+Math.pow(b-m,2),0)/errors.length);return{mean:m,sd,passM:Math.abs(m)<=5,passSd:sd<=8,pass:Math.abs(m)<=5&&sd<=8};}
 const errClr=v=>{const a=Math.abs(v);return a<=3?'#00C896':a<=8?'#F5A623':'#E63946';};
 const fmt=(v,d=1)=>isNaN(v)?'—':`${v>0?'+':''}${v.toFixed(d)}`;
-const INP={padding:'7px 8px',border:'1px solid #E2E8F0',borderRadius:6,fontSize:13,fontFamily:'Space Mono,monospace',outline:'none',width:'100%'};
-const LBL={fontSize:11,color:'#5A6B7E',fontWeight:500,display:'block',marginBottom:3};
-const SEC={fontSize:11,fontWeight:600,color:'#5A6B7E',textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:8};
 
-function VerifTab({vitals}){
+function VerifScreen({vitals}){
   const [param,setParam]=useState('nibp');
   const [meas,setMeas]=useState([]);
   const [e,setE]=useState({tSys:'',tDia:'',mSys:'',mDia:'',tSpo2:'',mSpo2:'',tTemp:'',mTemp:'',tHr:'',mHr:''});
-  useEffect(()=>{ setE(prev=>({...prev,tSys:String(vitals.sys),tDia:String(vitals.dia),tSpo2:String(vitals.spo2),tTemp:String(vitals.temp),tHr:String(vitals.hr)})); },[vitals]);
-  const add=()=>{ setMeas(prev=>[...prev,{id:Date.now(),param,...e}]); setE(prev=>({...prev,mSys:'',mDia:'',mSpo2:'',mTemp:'',mHr:''})); };
-  const del=id=>setMeas(prev=>prev.filter(m=>m.id!==id));
+  useEffect(()=>{setE(p=>({...p,tSys:String(vitals.sys),tDia:String(vitals.dia),tSpo2:String(vitals.spo2),tTemp:String(vitals.temp),tHr:String(vitals.hr)}));},[vitals]);
+  const add=()=>{setMeas(p=>[...p,{id:Date.now(),param,...e}]);setE(p=>({...p,mSys:'',mDia:'',mSpo2:'',mTemp:'',mHr:''}));};
+  const del=id=>setMeas(p=>p.filter(m=>m.id!==id));
   const fil=meas.filter(m=>m.param===param);
-  const sysErrs=fil.map(m=>parseFloat(m.mSys)-parseFloat(m.tSys)).filter(v=>!isNaN(v));
-  const diaErrs=fil.map(m=>parseFloat(m.mDia)-parseFloat(m.tDia)).filter(v=>!isNaN(v));
-  const spo2Errs=fil.map(m=>parseFloat(m.mSpo2)-parseFloat(m.tSpo2)).filter(v=>!isNaN(v));
-  const tempErrs=fil.map(m=>parseFloat(m.mTemp)-parseFloat(m.tTemp)).filter(v=>!isNaN(v));
-  const hrErrs=fil.map(m=>parseFloat(m.mHr)-parseFloat(m.tHr)).filter(v=>!isNaN(v));
-  const TabBtn=({id,lbl})=>(<button onClick={()=>setParam(id)} style={{padding:'5px 14px',fontSize:12,fontWeight:500,borderRadius:100,cursor:'pointer',border:param===id?'none':'1px solid #E2E8F0',background:param===id?'#00C896':'white',color:param===id?'white':'#5A6B7E'}}>{lbl}</button>);
+  const sysE=fil.map(m=>parseFloat(m.mSys)-parseFloat(m.tSys)).filter(v=>!isNaN(v));
+  const diaE=fil.map(m=>parseFloat(m.mDia)-parseFloat(m.tDia)).filter(v=>!isNaN(v));
   const Th=({c})=><th style={{padding:'6px 8px',fontSize:10,fontWeight:600,color:'#5A6B7E',textTransform:'uppercase',textAlign:'center'}}>{c}</th>;
   const Td=({c,s})=><td style={{padding:'6px 8px',textAlign:'center',fontFamily:'Space Mono,monospace',fontSize:12,...s}}>{c}</td>;
-  const StatCard=({s,label,unit,crit})=>{
-    if(!s)return null;
-    return(<div style={{background:'white',border:'1px solid #E2E8F0',borderRadius:8,padding:14,marginTop:12}}>
-      <div style={{...SEC,marginBottom:10}}>Estadísticas {label} — {crit}</div>
-      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:12}}>
-        {[{l:'Error medio',v:fmt(s.mean),ok:s.passM,c:'≤ ±5'},{l:'Desv. estándar',v:fmt(s.sd),ok:s.passSd,c:'≤ 8'}].map(x=>(
-          <div key={x.l}><div style={{fontSize:10,color:'#aaa',textTransform:'uppercase',letterSpacing:'0.04em',marginBottom:2}}>{x.l}</div>
-          <div style={{fontFamily:'Space Mono,monospace',fontSize:20,fontWeight:700,color:x.ok?'#00C896':'#E63946'}}>{x.v} <span style={{fontSize:10}}>{unit}</span></div>
-          <div style={{fontSize:10,color:'#aaa'}}>criterio {x.c} {unit}</div></div>
+  return(
+    <div className="screen" style={{height:'100%',overflow:'auto',background:'#F2F4F7',padding:14}}>
+      <div style={{display:'flex',gap:6,marginBottom:14,flexWrap:'wrap'}}>
+        {[['nibp','NIBP'],['spo2','SpO₂'],['temp','Temp'],['hr','FC']].map(([id,lbl])=>(
+          <button key={id} onClick={()=>setParam(id)} style={{padding:'7px 16px',fontSize:12,fontWeight:500,borderRadius:100,cursor:'pointer',border:param===id?'none':'1px solid #E2E8F0',background:param===id?'#00C896':'white',color:param===id?'white':'#5A6B7E'}}>{lbl}</button>
         ))}
       </div>
-      <div style={{padding:'10px 14px',borderRadius:6,display:'flex',alignItems:'center',gap:10,background:s.pass?'rgba(0,200,150,0.08)':'rgba(230,57,70,0.08)',border:`1px solid ${s.pass?'rgba(0,200,150,0.3)':'rgba(230,57,70,0.3)'}`}}>
-        <span style={{fontSize:18}}>{s.pass?'✅':'❌'}</span>
-        <div><div style={{fontWeight:700,color:s.pass?'#00C896':'#E63946'}}>{s.pass?'APROBADO':'REPROBADO'}</div>
-        <div style={{fontSize:11,color:'#aaa'}}>n={fil.length}{fil.length<5?' · ⚠ mínimo recomendado: 5':''}</div></div>
+      <div style={{background:'white',border:'1px solid #E2E8F0',borderRadius:8,padding:14,marginBottom:14}}>
+        <div style={{fontSize:11,fontWeight:600,color:'#5A6B7E',textTransform:'uppercase',letterSpacing:'0.05em',marginBottom:10}}>Nueva medición</div>
+        {param==='nibp'&&<div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr 1fr auto',gap:8,alignItems:'end'}}>
+          {[['tSys','T-SYS'],['tDia','T-DIA'],['mSys','M-SYS'],['mDia','M-DIA']].map(([k,l])=>(<div key={k}><label style={LBL}>{l}</label><input type="number" value={e[k]} onChange={ev=>setE({...e,[k]:ev.target.value})} style={INP}/></div>))}
+          <button onClick={add} style={{padding:'7px 14px',background:'#00C896',color:'white',border:'none',borderRadius:6,fontSize:16,cursor:'pointer',fontWeight:700,height:36,alignSelf:'end'}}>+</button>
+        </div>}
+        {param==='spo2'&&<div style={{display:'grid',gridTemplateColumns:'1fr 1fr auto',gap:8,alignItems:'end'}}>
+          {[['tSpo2','Target %'],['mSpo2','Medido %']].map(([k,l])=>(<div key={k}><label style={LBL}>{l}</label><input type="number" value={e[k]} onChange={ev=>setE({...e,[k]:ev.target.value})} style={INP}/></div>))}
+          <button onClick={add} style={{padding:'7px 14px',background:'#00C896',color:'white',border:'none',borderRadius:6,fontSize:16,cursor:'pointer',fontWeight:700,height:36,alignSelf:'end'}}>+</button>
+        </div>}
+        {param==='temp'&&<div style={{display:'grid',gridTemplateColumns:'1fr 1fr auto',gap:8,alignItems:'end'}}>
+          {[['tTemp','Ref °C'],['mTemp','Monitor °C']].map(([k,l])=>(<div key={k}><label style={LBL}>{l}</label><input type="number" step="0.1" value={e[k]} onChange={ev=>setE({...e,[k]:ev.target.value})} style={INP}/></div>))}
+          <button onClick={add} style={{padding:'7px 14px',background:'#00C896',color:'white',border:'none',borderRadius:6,fontSize:16,cursor:'pointer',fontWeight:700,height:36,alignSelf:'end'}}>+</button>
+        </div>}
+        {param==='hr'&&<div style={{display:'grid',gridTemplateColumns:'1fr 1fr auto',gap:8,alignItems:'end'}}>
+          {[['tHr','Target bpm'],['mHr','Medido bpm']].map(([k,l])=>(<div key={k}><label style={LBL}>{l}</label><input type="number" value={e[k]} onChange={ev=>setE({...e,[k]:ev.target.value})} style={INP}/></div>))}
+          <button onClick={add} style={{padding:'7px 14px',background:'#00C896',color:'white',border:'none',borderRadius:6,fontSize:16,cursor:'pointer',fontWeight:700,height:36,alignSelf:'end'}}>+</button>
+        </div>}
       </div>
-    </div>);
-  };
-  return(<div>
-    <div style={{display:'flex',gap:6,marginBottom:16,flexWrap:'wrap'}}>
-      <TabBtn id="nibp" lbl="NIBP"/><TabBtn id="spo2" lbl="SpO₂"/><TabBtn id="temp" lbl="Temperatura"/><TabBtn id="hr" lbl="FC"/>
-    </div>
-    <div style={{background:'white',border:'1px solid #E2E8F0',borderRadius:8,padding:14,marginBottom:14}}>
-      <div style={{...SEC,marginBottom:10}}>Nueva medición</div>
-      {param==='nibp'&&<div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr 1fr auto',gap:8,alignItems:'end'}}>
-        {[['tSys','T-SYS'],['tDia','T-DIA'],['mSys','M-SYS'],['mDia','M-DIA']].map(([k,lbl])=>(<div key={k}><label style={LBL}>{lbl}</label><input type="number" value={e[k]} onChange={ev=>setE({...e,[k]:ev.target.value})} style={INP}/></div>))}
-        <button onClick={add} style={{padding:'7px 14px',background:'#00C896',color:'white',border:'none',borderRadius:6,fontSize:14,cursor:'pointer',fontWeight:700,height:34,alignSelf:'end'}}>+</button>
-      </div>}
-      {param==='spo2'&&<div style={{display:'grid',gridTemplateColumns:'1fr 1fr auto',gap:8,alignItems:'end'}}>
-        {[['tSpo2','Target SpO₂ (%)'],['mSpo2','Medido SpO₂ (%)']].map(([k,lbl])=>(<div key={k}><label style={LBL}>{lbl}</label><input type="number" value={e[k]} onChange={ev=>setE({...e,[k]:ev.target.value})} style={INP}/></div>))}
-        <button onClick={add} style={{padding:'7px 14px',background:'#00C896',color:'white',border:'none',borderRadius:6,fontSize:14,cursor:'pointer',fontWeight:700,height:34,alignSelf:'end'}}>+</button>
-      </div>}
-      {param==='temp'&&<div style={{display:'grid',gridTemplateColumns:'1fr 1fr auto',gap:8,alignItems:'end'}}>
-        {[['tTemp','Referencia (°C)'],['mTemp','Monitor (°C)']].map(([k,lbl])=>(<div key={k}><label style={LBL}>{lbl}</label><input type="number" step="0.1" value={e[k]} onChange={ev=>setE({...e,[k]:ev.target.value})} style={INP}/></div>))}
-        <button onClick={add} style={{padding:'7px 14px',background:'#00C896',color:'white',border:'none',borderRadius:6,fontSize:14,cursor:'pointer',fontWeight:700,height:34,alignSelf:'end'}}>+</button>
-      </div>}
-      {param==='hr'&&<div style={{display:'grid',gridTemplateColumns:'1fr 1fr auto',gap:8,alignItems:'end'}}>
-        {[['tHr','Target FC'],['mHr','Medido FC']].map(([k,lbl])=>(<div key={k}><label style={LBL}>{lbl}</label><input type="number" value={e[k]} onChange={ev=>setE({...e,[k]:ev.target.value})} style={INP}/></div>))}
-        <button onClick={add} style={{padding:'7px 14px',background:'#00C896',color:'white',border:'none',borderRadius:6,fontSize:14,cursor:'pointer',fontWeight:700,height:34,alignSelf:'end'}}>+</button>
-      </div>}
-    </div>
-    {fil.length>0&&<div style={{background:'white',border:'1px solid #E2E8F0',borderRadius:8,overflow:'hidden',marginBottom:4}}>
-      <table style={{width:'100%',borderCollapse:'collapse',fontSize:12}}>
-        <thead><tr style={{background:'#F8F9FB'}}>
-          <Th c="#"/>
-          {param==='nibp'&&<><Th c="T-SYS"/><Th c="T-DIA"/><Th c="M-SYS"/><Th c="M-DIA"/><Th c="Δ SYS"/><Th c="Δ DIA"/></>}
-          {param==='spo2'&&<><Th c="Target"/><Th c="Medido"/><Th c="Δ"/></>}
-          {param==='temp'&&<><Th c="Ref."/><Th c="Monitor"/><Th c="Δ"/></>}
-          {param==='hr'&&<><Th c="Target"/><Th c="Medido"/><Th c="Δ"/></>}
-          <Th c=""/>
-        </tr></thead>
-        <tbody>{fil.map((m,i)=>{
-          const sE=parseFloat(m.mSys)-parseFloat(m.tSys),dE=parseFloat(m.mDia)-parseFloat(m.tDia);
-          const spE=parseFloat(m.mSpo2)-parseFloat(m.tSpo2),tpE=parseFloat(m.mTemp)-parseFloat(m.tTemp),hrE=parseFloat(m.mHr)-parseFloat(m.tHr);
-          return(<tr key={m.id} style={{borderTop:'1px solid #F0F0F0'}}>
-            <Td c={i+1} s={{textAlign:'left',paddingLeft:12,color:'#aaa'}}/>
-            {param==='nibp'&&<><Td c={m.tSys}/><Td c={m.tDia}/><Td c={m.mSys} s={{fontWeight:700}}/><Td c={m.mDia} s={{fontWeight:700}}/><Td c={fmt(sE)} s={{fontWeight:600,color:errClr(sE)}}/><Td c={fmt(dE)} s={{fontWeight:600,color:errClr(dE)}}/></>}
-            {param==='spo2'&&<><Td c={m.tSpo2+'%'}/><Td c={m.mSpo2+'%'} s={{fontWeight:700}}/><Td c={fmt(spE)+'%'} s={{fontWeight:600,color:errClr(spE*3)}}/></>}
-            {param==='temp'&&<><Td c={m.tTemp+'°C'}/><Td c={m.mTemp+'°C'} s={{fontWeight:700}}/><Td c={fmt(tpE,2)+'°C'} s={{fontWeight:600,color:errClr(Math.abs(tpE)*15)}}/></>}
-            {param==='hr'&&<><Td c={m.tHr}/><Td c={m.mHr} s={{fontWeight:700}}/><Td c={fmt(hrE)} s={{fontWeight:600,color:errClr(hrE)}}/></>}
-            <td style={{padding:'6px 8px',textAlign:'center'}}><button onClick={()=>del(m.id)} style={{background:'none',border:'none',cursor:'pointer',color:'#ccc',fontSize:18,lineHeight:1}}>×</button></td>
-          </tr>);
-        })}</tbody>
-      </table>
-    </div>}
-    {param==='nibp'&&sysErrs.length>0&&<StatCard s={{...calcStat(sysErrs),pass:calcStat(sysErrs)?.pass&&calcStat(diaErrs)?.pass}} label="NIBP" unit="mmHg" crit="AAMI SP10 / ISO 81060-2"/>}
-    {param==='spo2'&&spo2Errs.length>0&&<StatCard s={calcStat(spo2Errs)} label="SpO₂" unit="%" crit="ISO 9919"/>}
-    {param==='temp'&&tempErrs.length>0&&<StatCard s={calcStat(tempErrs)} label="Temperatura" unit="°C" crit="IEC 60601-2-56"/>}
-    {param==='hr'&&hrErrs.length>0&&<StatCard s={calcStat(hrErrs)} label="FC" unit="bpm" crit="Tol. ±3 bpm"/>}
-    {fil.length===0&&<div style={{textAlign:'center',padding:30,color:'#aaa',fontSize:14}}>Sin mediciones para {param.toUpperCase()}.</div>}
-  </div>);
-}
-
-// ══════════════════════════════════════════════════════
-// CALIBRACIÓN
-// ══════════════════════════════════════════════════════
-const PARAM_CFG = {
-  nibp: { label:'Presión (NIBP)', unit:'mmHg', tipo:'offset', norma:'AAMI SP10', tol:2, nomLabel:'Nominal (mmHg)', refLabel:'Referencia patrón (mmHg)' },
-  temp: { label:'Temperatura',   unit:'°C',   tipo:'offset', norma:'IEC 60601-2-56', tol:0.2, nomLabel:'Nominal (°C)', refLabel:'Referencia patrón (°C)', step:0.01 },
-  ecg:  { label:'ECG Amplitud',  unit:'mV',   tipo:'gain',   norma:'IEC 60601-2-25', tol:0.05, nomLabel:'Nominal (mV)', refLabel:'Medido instrumento (mV)', step:0.01 },
-  spo2: { label:'SpO₂',          unit:'%',    tipo:'offset', norma:'ISO 9919', tol:2, nomLabel:'Nominal (%)', refLabel:'Referencia patrón (%)' },
-};
-
-function CalibrationTab({ cal, setCal }){
-  const [param,setParam]=useState('nibp');
-  const [entry,setEntry]=useState({nominal:'',reference:''});
-  const cfg=PARAM_CFG[param];
-  const p=cal[param];
-
-  const setInstr=(k,v)=>setCal(prev=>({...prev,[param]:{...prev[param],instrument:{...prev[param].instrument,[k]:v}}}));
-  const setMeta=(k,v)=>setCal(prev=>({...prev,[param]:{...prev[param],[k]:v}}));
-
-  const addPoint=()=>{
-    const nom=parseFloat(entry.nominal),ref=parseFloat(entry.reference);
-    if(isNaN(nom)||isNaN(ref))return;
-    const error=ref-nom;
-    setCal(prev=>({...prev,[param]:{...prev[param],points:[...prev[param].points,{id:Date.now(),nominal:nom,reference:ref,error}]}}));
-    setEntry({nominal:'',reference:''});
-  };
-
-  const removePoint=id=>setCal(prev=>({...prev,[param]:{...prev[param],points:prev[param].points.filter(pt=>pt.id!==id)}}));
-
-  const applyCorrection=()=>{
-    if(!p.points.length)return;
-    if(cfg.tipo==='gain'){
-      const gain=p.points.reduce((a,pt)=>a+pt.reference/pt.nominal,0)/p.points.length;
-      setCal(prev=>({...prev,[param]:{...prev[param],gain:parseFloat(gain.toFixed(4)),applied:true,date:new Date().toISOString().split('T')[0]}}));
-    } else {
-      const offset=p.points.reduce((a,pt)=>a+pt.error,0)/p.points.length;
-      setCal(prev=>({...prev,[param]:{...prev[param],offset:parseFloat(offset.toFixed(3)),applied:true,date:new Date().toISOString().split('T')[0]}}));
-    }
-  };
-
-  const clearCorrection=()=>setCal(prev=>({...prev,[param]:{...defaultCalParam}}));
-  const toggleApply=()=>setCal(prev=>({...prev,[param]:{...prev[param],applied:!prev[param].applied}}));
-
-  const meanError=p.points.length?p.points.reduce((a,pt)=>a+pt.error,0)/p.points.length:null;
-  const maxError=p.points.length?Math.max(...p.points.map(pt=>Math.abs(pt.error))):null;
-  const correction=cfg.tipo==='gain'
-    ?(p.points.length?p.points.reduce((a,pt)=>a+pt.reference/pt.nominal,0)/p.points.length:null)
-    :meanError;
-
-  const calOK=maxError!==null&&maxError<=cfg.tol*3;
-
-  // Status badge for each param
-  const ParamStatus=({id})=>{
-    const c=cal[id];
-    const ok=c.applied&&c.date;
-    return(
-      <span style={{fontSize:9,fontFamily:'Space Mono,monospace',padding:'2px 6px',borderRadius:3,background:ok?'rgba(0,200,150,0.15)':'rgba(100,100,100,0.1)',color:ok?'#00C896':'#aaa',marginLeft:4}}>
-        {ok?'✓ CAL':'—'}
-      </span>
-    );
-  };
-
-  return(
-    <div>
-      {/* Overall status banner */}
-      {(() => {
-        const allCal=['nibp','temp','ecg','spo2'].every(k=>cal[k].applied&&cal[k].date);
-        const anyCal=['nibp','temp','ecg','spo2'].some(k=>cal[k].applied);
-        return(
-          <div style={{marginBottom:16,padding:'12px 14px',borderRadius:8,border:`1px solid ${allCal?'rgba(0,200,150,0.3)':anyCal?'rgba(245,166,35,0.3)':'rgba(100,100,100,0.2)'}`,background:allCal?'rgba(0,200,150,0.06)':anyCal?'rgba(245,166,35,0.06)':'rgba(0,0,0,0.03)',display:'flex',alignItems:'center',gap:12}}>
-            <span style={{fontSize:22}}>{allCal?'✅':anyCal?'⚠️':'⭕'}</span>
-            <div>
-              <div style={{fontWeight:600,fontSize:13,color:allCal?'#00C896':anyCal?'#F5A623':'#5A6B7E'}}>
-                {allCal?'Simulador calibrado — todos los parámetros':anyCal?'Calibración parcial':'Sin calibración aplicada'}
-              </div>
-              <div style={{fontSize:11,color:'#5A6B7E',marginTop:2}}>
-                {['nibp','temp','ecg','spo2'].map(k=>(
-                  <span key={k} style={{marginRight:10,color:cal[k].applied?'#00C896':'#aaa'}}>
-                    {PARAM_CFG[k].label.split(' ')[0]}: {cal[k].applied?(cal[k].date||'aplicado'):'—'}
-                  </span>
-                ))}
-              </div>
+      {fil.length>0&&<>
+        <div style={{background:'white',border:'1px solid #E2E8F0',borderRadius:8,overflow:'hidden',marginBottom:12}}>
+          <table style={{width:'100%',borderCollapse:'collapse',fontSize:12}}>
+            <thead><tr style={{background:'#F8F9FB'}}><Th c="#"/>
+              {param==='nibp'&&<><Th c="T-SYS"/><Th c="T-DIA"/><Th c="M-SYS"/><Th c="M-DIA"/><Th c="Δ SYS"/><Th c="Δ DIA"/></>}
+              {param==='spo2'&&<><Th c="Target"/><Th c="Medido"/><Th c="Δ"/></>}
+              {param==='temp'&&<><Th c="Ref."/><Th c="Monitor"/><Th c="Δ"/></>}
+              {param==='hr'&&<><Th c="Target"/><Th c="Medido"/><Th c="Δ"/></>}
+              <Th c=""/>
+            </tr></thead>
+            <tbody>{fil.map((m,i)=>{
+              const sE2=parseFloat(m.mSys)-parseFloat(m.tSys),dE2=parseFloat(m.mDia)-parseFloat(m.tDia);
+              const spE=parseFloat(m.mSpo2)-parseFloat(m.tSpo2),tpE=parseFloat(m.mTemp)-parseFloat(m.tTemp),hrE=parseFloat(m.mHr)-parseFloat(m.tHr);
+              return<tr key={m.id} style={{borderTop:'1px solid #F0F0F0'}}>
+                <Td c={i+1} s={{textAlign:'left',paddingLeft:12,color:'#aaa'}}/>
+                {param==='nibp'&&<><Td c={m.tSys}/><Td c={m.tDia}/><Td c={m.mSys} s={{fontWeight:700}}/><Td c={m.mDia} s={{fontWeight:700}}/><Td c={fmt(sE2)} s={{fontWeight:600,color:errClr(sE2)}}/><Td c={fmt(dE2)} s={{fontWeight:600,color:errClr(dE2)}}/></>}
+                {param==='spo2'&&<><Td c={m.tSpo2+'%'}/><Td c={m.mSpo2+'%'} s={{fontWeight:700}}/><Td c={fmt(spE)+'%'} s={{fontWeight:600,color:errClr(spE*3)}}/></>}
+                {param==='temp'&&<><Td c={m.tTemp+'°C'}/><Td c={m.mTemp+'°C'} s={{fontWeight:700}}/><Td c={fmt(tpE,2)+'°C'} s={{fontWeight:600,color:errClr(Math.abs(tpE)*15)}}/></>}
+                {param==='hr'&&<><Td c={m.tHr}/><Td c={m.mHr} s={{fontWeight:700}}/><Td c={fmt(hrE)} s={{fontWeight:600,color:errClr(hrE)}}/></>}
+                <td style={{padding:'6px',textAlign:'center'}}><button onClick={()=>del(m.id)} style={{background:'none',border:'none',cursor:'pointer',color:'#ccc',fontSize:18}}>×</button></td>
+              </tr>;
+            })}</tbody>
+          </table>
+        </div>
+        {param==='nibp'&&sysE.length>0&&(()=>{const ss=calcStat(sysE),ds=calcStat(diaE),pass=ss?.pass&&ds?.pass;return(
+          <div style={{background:'white',border:'1px solid #E2E8F0',borderRadius:8,padding:14}}>
+            <div style={{fontSize:11,fontWeight:600,color:'#5A6B7E',textTransform:'uppercase',letterSpacing:'0.05em',marginBottom:10}}>Estadísticas NIBP — AAMI SP10</div>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:12}}>
+              {[{l:'Error medio SYS',v:fmt(ss?.mean),ok:ss?.passM},{l:'DS SYS',v:fmt(ss?.sd),ok:ss?.passSd}].map(x=>(<div key={x.l}><div style={{fontSize:10,color:'#aaa',textTransform:'uppercase',marginBottom:2}}>{x.l}</div><div style={{fontFamily:'Space Mono,monospace',fontSize:18,fontWeight:700,color:x.ok?'#00C896':'#E63946'}}>{x.v} mmHg</div></div>))}
+            </div>
+            <div style={{padding:'10px 14px',borderRadius:6,display:'flex',alignItems:'center',gap:10,background:pass?'rgba(0,200,150,0.08)':'rgba(230,57,70,0.08)',border:`1px solid ${pass?'rgba(0,200,150,0.3)':'rgba(230,57,70,0.3)'}`}}>
+              <span style={{fontSize:18}}>{pass?'✅':'❌'}</span>
+              <div><div style={{fontWeight:700,color:pass?'#00C896':'#E63946'}}>{pass?'APROBADO':'REPROBADO'}</div>
+              <div style={{fontSize:11,color:'#aaa'}}>n={sysE.length}{sysE.length<5?' · ⚠ mín. 5':''}</div></div>
             </div>
           </div>
-        );
-      })()}
+        );})()}
+      </>}
+      {fil.length===0&&<div style={{textAlign:'center',padding:30,color:'#aaa'}}>Sin mediciones para {param.toUpperCase()}.</div>}
+    </div>
+  );
+}
 
-      {/* Param selector */}
-      <div style={{display:'flex',gap:6,marginBottom:16,flexWrap:'wrap'}}>
+function CalScreen({cal,setCal}){
+  const [param,setParam]=useState('nibp');
+  const [entry,setEntry]=useState({nominal:'',reference:''});
+  const cfg=PARAM_CFG[param],p=cal[param];
+  const setInstr=(k,v)=>setCal(prev=>({...prev,[param]:{...prev[param],instrument:{...prev[param].instrument,[k]:v}}}));
+  const setMeta=(k,v)=>setCal(prev=>({...prev,[param]:{...prev[param],[k]:v}}));
+  const addPoint=()=>{const nom=parseFloat(entry.nominal),ref=parseFloat(entry.reference);if(isNaN(nom)||isNaN(ref))return;setCal(prev=>({...prev,[param]:{...prev[param],points:[...prev[param].points,{id:Date.now(),nominal:nom,reference:ref,error:ref-nom}]}}));setEntry({nominal:'',reference:''});};
+  const removePoint=id=>setCal(prev=>({...prev,[param]:{...prev[param],points:prev[param].points.filter(pt=>pt.id!==id)}}));
+  const applyCorrection=()=>{if(!p.points.length)return;if(cfg.tipo==='gain'){const g=p.points.reduce((a,pt)=>a+pt.reference/pt.nominal,0)/p.points.length;setCal(prev=>({...prev,[param]:{...prev[param],gain:parseFloat(g.toFixed(4)),applied:true,date:new Date().toISOString().split('T')[0]}}));}else{const o=p.points.reduce((a,pt)=>a+pt.error,0)/p.points.length;setCal(prev=>({...prev,[param]:{...prev[param],offset:parseFloat(o.toFixed(3)),applied:true,date:new Date().toISOString().split('T')[0]}}));}};
+  const clear=()=>setCal(prev=>({...prev,[param]:{...defaultCalP}}));
+  const mean=p.points.length?p.points.reduce((a,pt)=>a+pt.error,0)/p.points.length:null;
+  const calCount=['nibp','temp','ecg','spo2'].filter(k=>cal[k].applied).length;
+  return(
+    <div className="screen" style={{height:'100%',overflow:'auto',background:'#F2F4F7',padding:14}}>
+      <div style={{marginBottom:14,padding:'12px 14px',borderRadius:8,border:`1px solid ${calCount===4?'rgba(0,200,150,0.3)':calCount>0?'rgba(245,166,35,0.3)':'rgba(100,100,100,0.2)'}`,background:calCount===4?'rgba(0,200,150,0.06)':calCount>0?'rgba(245,166,35,0.06)':'rgba(0,0,0,0.02)',display:'flex',alignItems:'center',gap:10}}>
+        <span style={{fontSize:20}}>{calCount===4?'✅':calCount>0?'⚠️':'⭕'}</span>
+        <div>
+          <div style={{fontWeight:600,fontSize:13,color:calCount===4?'#00C896':calCount>0?'#F5A623':'#5A6B7E'}}>{calCount===4?'Todos calibrados':calCount>0?`${calCount}/4 parámetros calibrados`:'Sin calibración activa'}</div>
+          <div style={{fontSize:11,color:'#5A6B7E',marginTop:2}}>
+            {['nibp','temp','ecg','spo2'].map(k=><span key={k} style={{marginRight:8,color:cal[k].applied?'#00C896':'#aaa'}}>{PARAM_CFG[k].label.split(' ')[0]}: {cal[k].applied?cal[k].date||'✓':'—'}</span>)}
+          </div>
+        </div>
+      </div>
+      <div style={{display:'flex',gap:6,marginBottom:14,flexWrap:'wrap'}}>
         {Object.entries(PARAM_CFG).map(([id,c])=>(
-          <button key={id} onClick={()=>setParam(id)} style={{padding:'6px 14px',fontSize:12,fontWeight:500,borderRadius:6,cursor:'pointer',border:param===id?'none':'1px solid #E2E8F0',background:param===id?'#1B2A3B':'white',color:param===id?'#00C896':'#5A6B7E',display:'flex',alignItems:'center',gap:4}}>
-            {c.label}<span style={{fontSize:9,fontFamily:'Space Mono,monospace',padding:'1px 5px',borderRadius:3,background:cal[id].applied?'rgba(0,200,150,0.2)':'rgba(0,0,0,0.05)',color:cal[id].applied?'#00C896':'#aaa'}}>{cal[id].applied?'CAL':'—'}</span>
+          <button key={id} onClick={()=>setParam(id)} style={{padding:'7px 14px',fontSize:12,fontWeight:500,borderRadius:8,cursor:'pointer',border:param===id?'none':'1px solid #E2E8F0',background:param===id?'#1B2A3B':'white',color:param===id?'#00C896':'#5A6B7E',display:'flex',alignItems:'center',gap:5}}>
+            {c.label.split(' ')[0]}
+            <span style={{fontSize:8,fontFamily:'Space Mono,monospace',padding:'1px 4px',borderRadius:3,background:cal[id].applied?'rgba(0,200,150,0.2)':'rgba(0,0,0,0.05)',color:cal[id].applied?'#00C896':'#aaa'}}>{cal[id].applied?'CAL':'—'}</span>
           </button>
         ))}
       </div>
-
-      {/* Instrument reference */}
-      <div style={{background:'white',border:'1px solid #E2E8F0',borderRadius:8,padding:14,marginBottom:14}}>
-        <div style={{...SEC,marginBottom:10}}>Instrumento patrón — {cfg.label}</div>
-        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:10,marginBottom:10}}>
-          {[['marca','Marca'],['modelo','Modelo'],['serie','N° Serie']].map(([k,lbl])=>(
-            <div key={k}><label style={LBL}>{lbl}</label><input value={p.instrument[k]||''} onChange={ev=>setInstr(k,ev.target.value)} style={{...INP,fontFamily:'Inter,sans-serif'}}/></div>
-          ))}
+      <div style={{background:'white',border:'1px solid #E2E8F0',borderRadius:8,padding:14,marginBottom:12}}>
+        <div style={{fontSize:11,fontWeight:600,color:'#5A6B7E',textTransform:'uppercase',letterSpacing:'0.05em',marginBottom:10}}>Instrumento patrón</div>
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:8}}>
+          {[['marca','Marca'],['modelo','Modelo'],['serie','N° Serie'],['cert','N° Cert.']].map(([k,l])=>(<div key={k}><label style={LBL}>{l}</label><input value={p.instrument[k]||''} onChange={ev=>setInstr(k,ev.target.value)} style={{...INP,fontFamily:'Inter,sans-serif'}}/></div>))}
         </div>
-        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
-          {[['cert','N° Certificado'],['trazabilidad','Trazabilidad']].map(([k,lbl])=>(
-            <div key={k}><label style={LBL}>{lbl}</label><input value={p.instrument[k]||''} onChange={ev=>setInstr(k,ev.target.value)} style={{...INP,fontFamily:'Inter,sans-serif'}}/></div>
-          ))}
-        </div>
+        <div><label style={LBL}>Trazabilidad</label><input value={p.instrument.trazabilidad||''} onChange={ev=>setInstr('trazabilidad',ev.target.value)} style={{...INP,fontFamily:'Inter,sans-serif'}}/></div>
       </div>
-
-      {/* Measurement points */}
-      <div style={{background:'white',border:'1px solid #E2E8F0',borderRadius:8,padding:14,marginBottom:14}}>
-        <div style={{...SEC,marginBottom:10}}>Puntos de calibración · tolerancia: ±{cfg.tol} {cfg.unit}</div>
-
-        {/* Entry */}
+      <div style={{background:'white',border:'1px solid #E2E8F0',borderRadius:8,padding:14,marginBottom:12}}>
+        <div style={{fontSize:11,fontWeight:600,color:'#5A6B7E',textTransform:'uppercase',letterSpacing:'0.05em',marginBottom:10}}>Puntos de calibración — {cfg.label}</div>
         <div style={{display:'grid',gridTemplateColumns:'1fr 1fr auto',gap:8,alignItems:'end',marginBottom:14}}>
           <div><label style={LBL}>{cfg.nomLabel}</label><input type="number" step={cfg.step||1} value={entry.nominal} onChange={ev=>setEntry({...entry,nominal:ev.target.value})} style={INP}/></div>
           <div><label style={LBL}>{cfg.refLabel}</label><input type="number" step={cfg.step||0.1} value={entry.reference} onChange={ev=>setEntry({...entry,reference:ev.target.value})} onKeyDown={ev=>ev.key==='Enter'&&addPoint()} style={INP}/></div>
-          <button onClick={addPoint} style={{padding:'7px 14px',background:'#1B2A3B',color:'#00C896',border:'1px solid #00C89640',borderRadius:6,fontSize:14,cursor:'pointer',fontWeight:700,height:34,alignSelf:'end'}}>+</button>
+          <button onClick={addPoint} style={{padding:'7px 14px',background:'#1B2A3B',color:'#00C896',border:'1px solid #00C89640',borderRadius:6,fontSize:16,cursor:'pointer',fontWeight:700,height:36,alignSelf:'end'}}>+</button>
         </div>
-
-        {p.points.length>0&&(
-          <>
-            <table style={{width:'100%',borderCollapse:'collapse',fontSize:12,marginBottom:14}}>
-              <thead><tr style={{background:'#F8F9FB'}}>
-                {['#','Nominal','Patrón','Error','Estado'].map(h=><th key={h} style={{padding:'6px 8px',fontSize:10,fontWeight:600,color:'#5A6B7E',textTransform:'uppercase',textAlign:'center'}}>{h}</th>)}
-                <th/>
-              </tr></thead>
-              <tbody>{p.points.map((pt,i)=>{
-                const ok=Math.abs(pt.error)<=cfg.tol*3;
-                return(
-                  <tr key={pt.id} style={{borderTop:'1px solid #F0F0F0'}}>
-                    <td style={{padding:'6px 8px',textAlign:'center',color:'#aaa',fontFamily:'Space Mono,monospace',fontSize:12}}>{i+1}</td>
-                    <td style={{padding:'6px 8px',textAlign:'center',fontFamily:'Space Mono,monospace',fontSize:12}}>{pt.nominal} {cfg.unit}</td>
-                    <td style={{padding:'6px 8px',textAlign:'center',fontFamily:'Space Mono,monospace',fontSize:12,fontWeight:700}}>{pt.reference} {cfg.unit}</td>
-                    <td style={{padding:'6px 8px',textAlign:'center',fontFamily:'Space Mono,monospace',fontSize:12,fontWeight:600,color:errClr(pt.error/cfg.tol*3)}}>{fmt(pt.error,cfg.step?3:2)} {cfg.unit}</td>
-                    <td style={{padding:'6px 8px',textAlign:'center'}}><span style={{fontFamily:'Space Mono,monospace',fontSize:10,padding:'2px 7px',borderRadius:3,background:ok?'rgba(0,200,150,0.1)':'rgba(230,57,70,0.1)',color:ok?'#00C896':'#E63946'}}>{ok?'OK':'FALLA'}</span></td>
-                    <td style={{padding:'6px 8px',textAlign:'center'}}><button onClick={()=>removePoint(pt.id)} style={{background:'none',border:'none',cursor:'pointer',color:'#ccc',fontSize:18}}>×</button></td>
-                  </tr>
-                );
-              })}</tbody>
-            </table>
-
-            {/* Summary */}
-            <div style={{background:'#F8F9FB',borderRadius:6,padding:12,marginBottom:12}}>
-              <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:10}}>
-                {[
-                  {l:'Error medio',v:meanError!==null?fmt(meanError,3)+' '+cfg.unit:'—'},
-                  {l:cfg.tipo==='gain'?'Factor de ganancia':'Corrección a aplicar',v:correction!==null?(cfg.tipo==='gain'?correction.toFixed(4):fmt(correction,3)+' '+cfg.unit):'—'},
-                  {l:'Error máximo',v:maxError!==null?Math.abs(maxError).toFixed(3)+' '+cfg.unit:'—'},
-                ].map(x=>(
-                  <div key={x.l}>
-                    <div style={{fontSize:10,color:'#aaa',textTransform:'uppercase',letterSpacing:'0.04em',marginBottom:2}}>{x.l}</div>
-                    <div style={{fontFamily:'Space Mono,monospace',fontSize:16,fontWeight:700,color:'#1A2535'}}>{x.v}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
-              <button onClick={applyCorrection} style={{padding:'8px 16px',background:'#00C896',color:'white',border:'none',borderRadius:6,fontSize:13,cursor:'pointer',fontWeight:600}}>
-                ✓ Aplicar corrección
-              </button>
-              {p.applied&&(
-                <button onClick={toggleApply} style={{padding:'8px 16px',background:'rgba(245,166,35,0.15)',color:'#F5A623',border:'1px solid #F5A623',borderRadius:6,fontSize:13,cursor:'pointer'}}>
-                  {p.applied?'Desactivar':'Activar'}
-                </button>
-              )}
-              <button onClick={clearCorrection} style={{padding:'8px 16px',background:'white',color:'#5A6B7E',border:'1px solid #E2E8F0',borderRadius:6,fontSize:13,cursor:'pointer'}}>
-                ↺ Limpiar
-              </button>
-            </div>
-          </>
-        )}
-
-        {p.points.length===0&&(
-          <div style={{textAlign:'center',padding:'20px 0',color:'#aaa',fontSize:13}}>
-            Ingresá al menos 3 puntos de calibración para aplicar corrección.
+        {p.points.length>0&&<>
+          <table style={{width:'100%',borderCollapse:'collapse',fontSize:12,marginBottom:12}}>
+            <thead><tr style={{background:'#F8F9FB'}}>
+              {['#','Nominal','Patrón','Error','Estado'].map(h=><th key={h} style={{padding:'5px 8px',fontSize:10,fontWeight:600,color:'#5A6B7E',textTransform:'uppercase',textAlign:'center'}}>{h}</th>)}
+              <th/>
+            </tr></thead>
+            <tbody>{p.points.map((pt,i)=>{const ok=Math.abs(pt.error)<=cfg.tol*3;return(
+              <tr key={pt.id} style={{borderBottom:'1px solid #F0F0F0'}}>
+                <td style={{padding:'5px 8px',textAlign:'center',color:'#aaa',fontFamily:'Space Mono,monospace',fontSize:11}}>{i+1}</td>
+                <td style={{padding:'5px 8px',textAlign:'center',fontFamily:'Space Mono,monospace',fontSize:11}}>{pt.nominal} {cfg.unit}</td>
+                <td style={{padding:'5px 8px',textAlign:'center',fontFamily:'Space Mono,monospace',fontSize:11,fontWeight:700}}>{pt.reference} {cfg.unit}</td>
+                <td style={{padding:'5px 8px',textAlign:'center',fontFamily:'Space Mono,monospace',fontSize:11,color:ok?'#00C896':'#E63946'}}>{fmt(pt.error,3)} {cfg.unit}</td>
+                <td style={{padding:'5px 8px',textAlign:'center'}}><span style={{fontFamily:'Space Mono,monospace',fontSize:9,padding:'2px 6px',borderRadius:3,background:ok?'rgba(0,200,150,0.1)':'rgba(230,57,70,0.1)',color:ok?'#00C896':'#E63946'}}>{ok?'OK':'FALLA'}</span></td>
+                <td style={{padding:'5px',textAlign:'center'}}><button onClick={()=>removePoint(pt.id)} style={{background:'none',border:'none',cursor:'pointer',color:'#ccc',fontSize:16}}>×</button></td>
+              </tr>);
+            })}</tbody>
+          </table>
+          {mean!==null&&<div style={{background:'#F8F9FB',borderRadius:6,padding:10,marginBottom:12,display:'flex',gap:20}}>
+            <div><div style={{fontSize:10,color:'#aaa',textTransform:'uppercase',marginBottom:2}}>Error medio</div><div style={{fontFamily:'Space Mono,monospace',fontSize:16,fontWeight:700,color:'#1A2535'}}>{fmt(mean,3)} {cfg.unit}</div></div>
+            <div><div style={{fontSize:10,color:'#aaa',textTransform:'uppercase',marginBottom:2}}>Corrección</div><div style={{fontFamily:'Space Mono,monospace',fontSize:16,fontWeight:700,color:'#1A2535'}}>{cfg.tipo==='gain'?(p.points.reduce((a,pt)=>a+pt.reference/pt.nominal,0)/p.points.length).toFixed(4):fmt(mean,3)+' '+cfg.unit}</div></div>
+          </div>}
+          <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
+            <button onClick={applyCorrection} style={{padding:'8px 16px',background:'#00C896',color:'white',border:'none',borderRadius:6,fontSize:13,cursor:'pointer',fontWeight:600}}>✓ Aplicar corrección</button>
+            <button onClick={clear} style={{padding:'8px 14px',background:'white',color:'#5A6B7E',border:'1px solid #E2E8F0',borderRadius:6,fontSize:13,cursor:'pointer'}}>↺ Limpiar</button>
           </div>
-        )}
+        </>}
+        {p.points.length===0&&<div style={{textAlign:'center',padding:'16px 0',color:'#aaa',fontSize:13}}>Ingresá al menos 3 puntos para aplicar corrección.</div>}
       </div>
-
-      {/* Applied correction status */}
-      {p.applied&&(
-        <div style={{background:'rgba(0,200,150,0.06)',border:'1px solid rgba(0,200,150,0.25)',borderRadius:8,padding:12,marginBottom:14,display:'flex',alignItems:'center',gap:10}}>
-          <span style={{fontSize:20}}>✅</span>
-          <div>
-            <div style={{fontWeight:600,color:'#00C896',fontSize:13}}>Corrección activa — {cfg.label}</div>
-            <div style={{fontSize:11,color:'#5A6B7E',marginTop:2}}>
-              {cfg.tipo==='gain'?`Ganancia: ×${p.gain.toFixed(4)}`:`Offset: ${fmt(p.offset,3)} ${cfg.unit}`}
-              {p.date&&` · Calibrado: ${p.date}`}
-            </div>
-          </div>
+      {p.applied&&<div style={{background:'rgba(0,200,150,0.06)',border:'1px solid rgba(0,200,150,0.25)',borderRadius:8,padding:'12px 14px',marginBottom:12,display:'flex',alignItems:'center',gap:10}}>
+        <span style={{fontSize:18}}>✅</span>
+        <div>
+          <div style={{fontWeight:600,color:'#00C896',fontSize:13}}>Corrección activa — {cfg.label}</div>
+          <div style={{fontSize:11,color:'#5A6B7E',marginTop:2}}>{cfg.tipo==='gain'?`Ganancia: ×${p.gain.toFixed(4)}`:`Offset: ${fmt(p.offset,3)} ${cfg.unit}`} {p.date&&`· ${p.date}`}</div>
         </div>
-      )}
-
-      {/* Calibration record */}
-      <div style={{background:'white',border:'1px solid #E2E8F0',borderRadius:8,padding:14,marginBottom:14}}>
-        <div style={{...SEC,marginBottom:10}}>Datos del registro</div>
-        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:10}}>
+      </div>}
+      <div style={{background:'white',border:'1px solid #E2E8F0',borderRadius:8,padding:14,marginBottom:12}}>
+        <div style={{fontSize:11,fontWeight:600,color:'#5A6B7E',textTransform:'uppercase',letterSpacing:'0.05em',marginBottom:10}}>Datos del registro</div>
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
           <div><label style={LBL}>Técnico</label><input value={p.tecnico||''} onChange={ev=>setMeta('tecnico',ev.target.value)} style={{...INP,fontFamily:'Inter,sans-serif'}}/></div>
-          <div><label style={LBL}>Fecha de calibración</label><input type="date" value={p.date||''} onChange={ev=>setMeta('date',ev.target.value)} style={{...INP,fontFamily:'Inter,sans-serif'}}/></div>
-          <div><label style={LBL}>Próxima calibración</label><input type="date" value={p.nextDate||''} onChange={ev=>setMeta('nextDate',ev.target.value)} style={{...INP,fontFamily:'Inter,sans-serif'}}/></div>
+          <div><label style={LBL}>Fecha</label><input type="date" value={p.date||''} onChange={ev=>setMeta('date',ev.target.value)} style={{...INP,fontFamily:'Inter,sans-serif'}}/></div>
+          <div style={{gridColumn:'1/-1'}}><label style={LBL}>Próxima calibración</label><input type="date" value={p.nextDate||''} onChange={ev=>setMeta('nextDate',ev.target.value)} style={{...INP,fontFamily:'Inter,sans-serif'}}/></div>
         </div>
       </div>
+      <button onClick={()=>window.print()} style={{width:'100%',padding:'12px',background:'#1B2A3B',color:'white',border:'none',borderRadius:8,fontSize:14,cursor:'pointer',fontWeight:600}}>🖨 Certificado de calibración</button>
+    </div>
+  );
+}
 
-      {/* Certificate button */}
-      <div style={{display:'flex',justifyContent:'flex-end',marginBottom:4}}>
-        <button onClick={()=>window.print()} className="no-print" style={{padding:'8px 18px',background:'#1B2A3B',color:'white',border:'none',borderRadius:6,fontSize:13,cursor:'pointer'}}>
-          🖨 Certificado de calibración
-        </button>
+function InformeScreen({eq,setEq}){
+  const fecha=new Date().toLocaleDateString('es-AR',{day:'2-digit',month:'long',year:'numeric'});
+  return(
+    <div className="screen" style={{height:'100%',overflow:'auto',background:'#F2F4F7',padding:14}}>
+      <div style={{background:'white',border:'1px solid #E2E8F0',borderRadius:8,padding:14,marginBottom:14}}>
+        <div style={{fontSize:11,fontWeight:600,color:'#5A6B7E',textTransform:'uppercase',letterSpacing:'0.05em',marginBottom:10}}>Datos del equipo</div>
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
+          {[['marca','Marca'],['modelo','Modelo'],['serie','N° Serie'],['cliente','Cliente'],['tecnico','Técnico'],['ot','N° OT']].map(([k,l])=>(<div key={k}><label style={LBL}>{l}</label><input value={eq[k]||''} onChange={ev=>setEq(p=>({...p,[k]:ev.target.value}))} style={{...INP,fontFamily:'Inter,sans-serif'}}/></div>))}
+        </div>
       </div>
-
-      {/* Printable certificate */}
-      <div id="cert-area" style={{background:'white',border:'1px solid #E2E8F0',borderRadius:8,padding:24}}>
-        <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:16}}>
+      <button onClick={()=>window.print()} style={{width:'100%',padding:'12px',background:'#1B2A3B',color:'white',border:'none',borderRadius:8,fontSize:14,cursor:'pointer',fontWeight:600,marginBottom:14}}>🖨 Imprimir informe</button>
+      <div id="print-area" style={{background:'white',border:'1px solid #E2E8F0',borderRadius:8,padding:24}}>
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:14}}>
           <div>
             <div style={{fontFamily:'Space Mono,monospace',fontSize:9,letterSpacing:'0.15em',color:'#aaa',textTransform:'uppercase'}}>Soluciones Electromédicas SJ — SEM</div>
-            <div style={{fontSize:20,fontWeight:700,color:'#1A2535',marginTop:4}}>Certificado de Calibración</div>
-            <div style={{fontSize:12,color:'#5A6B7E'}}>Simulador de Paciente SEM v3.0</div>
+            <div style={{fontSize:18,fontWeight:700,color:'#1A2535',marginTop:3}}>Informe de Verificación</div>
+            <div style={{fontSize:12,color:'#5A6B7E'}}>SEM Simulator v3.0</div>
           </div>
-          <div style={{textAlign:'right'}}>
-            <div style={{fontFamily:'Space Mono,monospace',fontSize:11,fontWeight:700}}>{new Date().toLocaleDateString('es-AR',{day:'2-digit',month:'long',year:'numeric'})}</div>
-            <div style={{fontFamily:'Space Mono,monospace',fontSize:10,color:'#aaa',marginTop:2}}>CAL-{new Date().getFullYear()}-{String(new Date().getMonth()+1).padStart(2,'0')}</div>
-          </div>
+          <div style={{textAlign:'right'}}><div style={{fontFamily:'Space Mono,monospace',fontSize:11,fontWeight:700}}>{fecha}</div>{eq.ot&&<div style={{fontFamily:'Space Mono,monospace',fontSize:10,color:'#aaa'}}>OT #{eq.ot}</div>}</div>
         </div>
         <div style={{height:1,background:'#E2E8F0',margin:'12px 0'}}/>
-
-        {/* Summary table all params */}
-        <div style={{fontSize:12,fontWeight:600,color:'#1A2535',marginBottom:8}}>Resumen de calibración — todos los parámetros</div>
-        <table style={{width:'100%',borderCollapse:'collapse',fontSize:11,marginBottom:16}}>
-          <thead><tr style={{background:'#F8F9FB'}}>
-            {['Parámetro','Instrumento patrón','N° Cert.','Trazabilidad','Corrección','Estado','Válido hasta'].map(h=>(
-              <th key={h} style={{padding:'6px 8px',fontSize:9,fontWeight:600,color:'#5A6B7E',textTransform:'uppercase',textAlign:'left',borderBottom:'2px solid #E2E8F0'}}>{h}</th>
-            ))}
-          </tr></thead>
-          <tbody>{Object.entries(PARAM_CFG).map(([id,c])=>{
-            const cp=cal[id];
-            const corr=c.tipo==='gain'?`×${cp.gain.toFixed(4)}`:`${fmt(cp.offset,3)} ${c.unit}`;
-            return(
-              <tr key={id} style={{borderBottom:'1px solid #F0F0F0'}}>
-                <td style={{padding:'7px 8px',fontWeight:500}}>{c.label}</td>
-                <td style={{padding:'7px 8px',fontFamily:'Space Mono,monospace',fontSize:10}}>{cp.instrument.marca||'—'} {cp.instrument.modelo||''}</td>
-                <td style={{padding:'7px 8px',fontFamily:'Space Mono,monospace',fontSize:10}}>{cp.instrument.cert||'—'}</td>
-                <td style={{padding:'7px 8px',fontSize:10}}>{cp.instrument.trazabilidad||'—'}</td>
-                <td style={{padding:'7px 8px',fontFamily:'Space Mono,monospace',fontSize:10,fontWeight:600,color:cp.applied?'#1A2535':'#aaa'}}>{cp.applied?corr:'Sin calibrar'}</td>
-                <td style={{padding:'7px 8px'}}>
-                  <span style={{fontFamily:'Space Mono,monospace',fontSize:9,padding:'2px 7px',borderRadius:3,background:cp.applied?'rgba(0,200,150,0.1)':'rgba(200,200,200,0.2)',color:cp.applied?'#00C896':'#aaa'}}>{cp.applied?'CALIBRADO':'PENDIENTE'}</span>
-                </td>
-                <td style={{padding:'7px 8px',fontFamily:'Space Mono,monospace',fontSize:10}}>{cp.nextDate||'—'}</td>
-              </tr>
-            );
-          })}</tbody>
-        </table>
-
-        {/* Points for current param */}
-        {p.points.length>0&&(
-          <>
-            <div style={{height:1,background:'#E2E8F0',margin:'12px 0'}}/>
-            <div style={{fontSize:12,fontWeight:600,color:'#1A2535',marginBottom:8}}>Puntos de calibración — {cfg.label}</div>
-            <table style={{width:'100%',borderCollapse:'collapse',fontSize:11,marginBottom:12}}>
-              <thead><tr style={{background:'#F8F9FB'}}>
-                {['#','Nominal','Patrón','Error','Estado'].map(h=><th key={h} style={{padding:'5px 8px',fontSize:9,fontWeight:600,color:'#5A6B7E',textTransform:'uppercase',textAlign:'center'}}>{h}</th>)}
-              </tr></thead>
-              <tbody>{p.points.map((pt,i)=>{
-                const ok=Math.abs(pt.error)<=cfg.tol*3;
-                return(<tr key={pt.id} style={{borderBottom:'1px solid #F0F0F0'}}>
-                  <td style={{padding:'5px 8px',textAlign:'center',color:'#aaa',fontFamily:'Space Mono,monospace',fontSize:11}}>{i+1}</td>
-                  <td style={{padding:'5px 8px',textAlign:'center',fontFamily:'Space Mono,monospace',fontSize:11}}>{pt.nominal} {cfg.unit}</td>
-                  <td style={{padding:'5px 8px',textAlign:'center',fontFamily:'Space Mono,monospace',fontSize:11,fontWeight:700}}>{pt.reference} {cfg.unit}</td>
-                  <td style={{padding:'5px 8px',textAlign:'center',fontFamily:'Space Mono,monospace',fontSize:11,color:ok?'#00C896':'#E63946'}}>{fmt(pt.error,3)} {cfg.unit}</td>
-                  <td style={{padding:'5px 8px',textAlign:'center'}}><span style={{fontFamily:'Space Mono,monospace',fontSize:9,padding:'2px 6px',borderRadius:3,background:ok?'rgba(0,200,150,0.1)':'rgba(230,57,70,0.1)',color:ok?'#00C896':'#E63946'}}>{ok?'OK':'FALLA'}</span></td>
-                </tr>);
-              })}</tbody>
-            </table>
-            <div style={{fontSize:11,color:'#5A6B7E',marginBottom:12}}>Norma de referencia: {cfg.norma} · Técnico: {p.tecnico||'—'} · Corrección aplicada: {cfg.tipo==='gain'?`Ganancia ×${p.gain.toFixed(4)}`:`Offset ${fmt(p.offset,3)} ${cfg.unit}`}</div>
-          </>
-        )}
-
-        <div style={{height:1,background:'#E2E8F0',margin:'16px 0'}}/>
-        <div style={{fontSize:11,color:'#aaa',lineHeight:1.7,marginBottom:24}}>
-          La calibración fue realizada por comparación directa con instrumento patrón de referencia trazable. Las correcciones se aplican automáticamente al Simulador de Paciente SEM v3.0 hasta la fecha de próxima calibración indicada.
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'6px 24px',marginBottom:12}}>
+          {[['Marca',eq.marca],['Modelo',eq.modelo],['N° Serie',eq.serie],['Cliente',eq.cliente],['Técnico',eq.tecnico]].map(([l,v])=>(<div key={l} style={{display:'flex',gap:8,fontSize:12}}><span style={{color:'#5A6B7E',minWidth:70}}>{l}:</span><span style={{fontWeight:600}}>{v||'—'}</span></div>))}
         </div>
-        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:30,marginTop:40}}>
-          {['Técnico responsable','Instrumento patrón / Lab. calibración','Autorizado por'].map(l=>(
-            <div key={l} style={{borderTop:'1px solid #ccc',paddingTop:8,fontSize:11,color:'#aaa'}}>{l}</div>
-          ))}
+        <div style={{height:1,background:'#E2E8F0',margin:'12px 0'}}/>
+        <div style={{fontSize:11,color:'#aaa',lineHeight:1.6,marginBottom:24}}>Verificación realizada con SEM Simulator v3.0 calibrado. Criterios: NIBP → AAMI SP10/ISO 81060-2 · SpO₂ → ISO 9919 · Temperatura → IEC 60601-2-56.</div>
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:40,marginTop:40}}>
+          <div style={{borderTop:'1px solid #ccc',paddingTop:8,fontSize:12,color:'#aaa'}}>Firma y sello del técnico</div>
+          <div style={{borderTop:'1px solid #ccc',paddingTop:8,fontSize:12,color:'#aaa'}}>Conformidad del cliente</div>
         </div>
       </div>
     </div>
@@ -649,295 +751,66 @@ function CalibrationTab({ cal, setCal }){
 }
 
 // ══════════════════════════════════════════════════════
-// INFORME
-// ══════════════════════════════════════════════════════
-function InformeTab({eq,setEq}){
-  const fecha=new Date().toLocaleDateString('es-AR',{day:'2-digit',month:'long',year:'numeric'});
-  return(<div>
-    <div style={{marginBottom:16}}>
-      <div style={{...SEC,marginBottom:10}}>Datos del equipo</div>
-      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
-        {[['marca','Marca'],['modelo','Modelo'],['serie','N° Serie'],['cliente','Cliente / Institución'],['tecnico','Técnico'],['ot','N° Orden de Trabajo']].map(([k,lbl])=>(
-          <div key={k}><label style={LBL}>{lbl}</label><input value={eq[k]||''} onChange={ev=>setEq(p=>({...p,[k]:ev.target.value}))} style={{...INP,fontFamily:'Inter,sans-serif'}}/></div>
-        ))}
-      </div>
-    </div>
-    <div style={{display:'flex',justifyContent:'flex-end',marginBottom:10}}>
-      <button onClick={()=>window.print()} style={{padding:'7px 18px',background:'#1B2A3B',color:'white',border:'none',borderRadius:6,fontSize:13,cursor:'pointer'}}>🖨 Imprimir</button>
-    </div>
-    <div id="print-area" style={{background:'white',border:'1px solid #E2E8F0',borderRadius:8,padding:24}}>
-      <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:16}}>
-        <div>
-          <div style={{fontFamily:'Space Mono,monospace',fontSize:9,letterSpacing:'0.15em',color:'#aaa',textTransform:'uppercase'}}>Soluciones Electromédicas SJ — SEM</div>
-          <div style={{fontSize:20,fontWeight:700,color:'#1A2535',marginTop:4}}>Informe de Verificación</div>
-          <div style={{fontSize:12,color:'#5A6B7E'}}>Simulador de Paciente SEM v3.0</div>
-        </div>
-        <div style={{textAlign:'right'}}>
-          <div style={{fontFamily:'Space Mono,monospace',fontSize:12,fontWeight:700}}>{fecha}</div>
-          {eq.ot&&<div style={{fontFamily:'Space Mono,monospace',fontSize:10,color:'#aaa'}}>OT #{eq.ot}</div>}
-        </div>
-      </div>
-      <div style={{height:1,background:'#E2E8F0',margin:'12px 0'}}/>
-      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'6px 24px',marginBottom:16}}>
-        {[['Marca',eq.marca],['Modelo',eq.modelo],['N° Serie',eq.serie],['Cliente',eq.cliente],['Técnico',eq.tecnico]].map(([l,v])=>(
-          <div key={l} style={{display:'flex',gap:8,fontSize:12}}>
-            <span style={{color:'#5A6B7E',minWidth:80}}>{l}:</span><span style={{fontWeight:600}}>{v||'—'}</span>
-          </div>
-        ))}
-      </div>
-      <div style={{height:1,background:'#E2E8F0',margin:'12px 0'}}/>
-      <div style={{fontSize:12,color:'#aaa',lineHeight:1.6,marginBottom:32}}>
-        Verificación realizada con Simulador de Paciente SEM v3.0 calibrado.<br/>
-        Criterios: NIBP → AAMI SP10/ISO 81060-2 · SpO₂ → ISO 9919 · Temperatura → IEC 60601-2-56 · ECG → IEC 60601-2-25.
-      </div>
-      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:40,marginTop:48}}>
-        <div style={{borderTop:'1px solid #ccc',paddingTop:8,fontSize:12,color:'#aaa'}}>Firma y sello del técnico</div>
-        <div style={{borderTop:'1px solid #ccc',paddingTop:8,fontSize:12,color:'#aaa'}}>Conformidad del cliente</div>
-      </div>
-    </div>
-  </div>);
-}
-
-// ══════════════════════════════════════════════════════
-// APP
+// APP PRINCIPAL
 // ══════════════════════════════════════════════════════
 function App(){
-  const [tab,setTab]=useState('sim');
+  const [screen,setScreen]=useState('home');
   const [rhythm,setRhythm]=useState('sinusal');
   const [running,setRunning]=useState(true);
   const [prog,setProg]=useState('normal');
-  const [eq,setEq]=useState({marca:'',modelo:'',serie:'',cliente:'',tecnico:'',ot:''});
   const [vitals,setVitals]=useState({hr:72,spo2:98,sys:120,dia:80,temp:36.6,resp:16});
   const [ecgMode,setEcgMode]=useState('cardiaco');
   const [amplitude,setAmplitude]=useState(1.0);
   const [stOffset,setStOffset]=useState(0.0);
   const [spo2Brand,setSpo2Brand]=useState('nellcor');
-  const [cal,setCal]=useState(()=>{ try{ return JSON.parse(localStorage.getItem('sem_cal'))||defaultCal; }catch{ return defaultCal; } });
-
-  useEffect(()=>{ localStorage.setItem('sem_cal',JSON.stringify(cal)); },[cal]);
+  const [eq,setEq]=useState({marca:'',modelo:'',serie:'',cliente:'',tecnico:'',ot:''});
+  const [cal,setCal]=useState(()=>{try{return JSON.parse(localStorage.getItem('sem_cal'))||defaultCal;}catch{return defaultCal;}});
+  const [ip,setIp]=useState('192.168.4.1');
+  useEffect(()=>{localStorage.setItem('sem_cal',JSON.stringify(cal));},[cal]);
 
   const setV=(k,v)=>{setVitals(prev=>({...prev,[k]:v}));setProg(null);};
   const applyProg=p=>{setVitals({hr:p.hr,spo2:p.spo2,sys:p.sys,dia:p.dia,temp:p.temp,resp:p.resp});setRhythm(p.rhythm);setProg(p.id);};
 
-  // Apply calibration corrections to output values
-  const correctedVitals = {
+  // Corrected values
+  const cv={
     ...vitals,
-    sys:  Math.round(vitals.sys  + (cal.nibp.applied ? cal.nibp.offset : 0)),
-    dia:  Math.round(vitals.dia  + (cal.nibp.applied ? cal.nibp.offset : 0)),
-    temp: parseFloat((vitals.temp + (cal.temp.applied ? cal.temp.offset : 0)).toFixed(1)),
-    spo2: Math.round(vitals.spo2 + (cal.spo2.applied ? cal.spo2.offset : 0)),
+    sys:Math.round(vitals.sys+(cal.nibp.applied?cal.nibp.offset:0)),
+    dia:Math.round(vitals.dia+(cal.nibp.applied?cal.nibp.offset:0)),
+    temp:parseFloat((vitals.temp+(cal.temp.applied?cal.temp.offset:0)).toFixed(1)),
+    spo2:Math.round(vitals.spo2+(cal.spo2.applied?cal.spo2.offset:0)),
   };
-  const correctedAmplitude = amplitude * (cal.ecg.applied ? cal.ecg.gain : 1);
-
-  const map=Math.round(correctedVitals.dia+(correctedVitals.sys-correctedVitals.dia)/3);
-  const dead=rhythm==='vfib'||rhythm==='asistolia';
-  const hrAlarm=dead||vitals.hr<50||vitals.hr>120;
-  const spo2Alarm=dead||correctedVitals.spo2<90;
-  const bpAlarm=dead||correctedVitals.sys>=180||correctedVitals.sys<90;
-  const tempAlarm=correctedVitals.temp>=38.5||correctedVitals.temp<35.5;
+  const corrAmp=amplitude*(cal.ecg.applied?cal.ecg.gain:1);
   const anyCal=cal.nibp.applied||cal.temp.applied||cal.ecg.applied||cal.spo2.applied;
 
-  const hrC=dead?'#E63946':vitals.hr<50?'#3A86FF':vitals.hr>120?'#F5A623':'#00C896';
-  const spC=correctedVitals.spo2<90?'#E63946':correctedVitals.spo2<95?'#F5A623':'#00BFFF';
-  const nibpC=dead?'#E63946':correctedVitals.sys>=180?'#E63946':correctedVitals.sys>=140?'#F5A623':correctedVitals.sys<90?'#3A86FF':'#00C896';
-  const tmpC=correctedVitals.temp>=38.5?'#E63946':correctedVitals.temp>=37.5?'#F5A623':correctedVitals.temp<35.5?'#3A86FF':'#00C896';
-  const ri=RHYTHM_INFO[rhythm]||RHYTHM_INFO.sinusal;
-
-  const SL=({label,k,min,max,step,unit})=>(
-    <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:9}}>
-      <span style={{fontFamily:'Space Mono,monospace',fontSize:10,color:'#5A6B7E',width:36,flexShrink:0}}>{label}</span>
-      <input type="range" min={min} max={max} step={step} value={vitals[k]}
-        onChange={ev=>setV(k,step<1?parseFloat(ev.target.value):Number(ev.target.value))}
-        style={{flex:1,accentColor:'#00C896'}}/>
-      <span style={{fontFamily:'Space Mono,monospace',fontSize:13,fontWeight:700,color:'#1A2535',width:60,textAlign:'right',flexShrink:0}}>
-        {step<1?Number(vitals[k]).toFixed(1):vitals[k]} <span style={{fontSize:9,fontWeight:400,color:'#aaa'}}>{unit}</span>
-      </span>
-    </div>
-  );
-
-  const brand=SPO2_BRANDS[spo2Brand];
-  const TABS=[['sim','Simulador'],['cal','Calibración'],['verif','Verificación'],['informe','Informe']];
+  const SCREEN_TITLES={home:'SEM Simulator',monitor:'Monitor Multiparamétrico',spo2:'Saturometría SpO₂',ecg:'ECG / Calibración',cal:'Calibración',verif:'Verificación',informe:'Informe'};
 
   return(
-    <div style={{display:'flex',flexDirection:'column',height:'100vh'}}>
-      <div id="app-header" style={{background:'#0B1520',padding:'8px 16px',display:'flex',alignItems:'center',gap:12,flexShrink:0,borderBottom:'1px solid #1A2535'}}>
-        <span style={{fontFamily:'Space Mono,monospace',fontSize:12,fontWeight:700,color:'#00C896',letterSpacing:'0.1em'}}>◉ SEM</span>
-        <span style={{fontSize:13,color:'rgba(255,255,255,0.65)',fontWeight:500}}>Simulator</span>
-        {anyCal&&<span style={{fontFamily:'Space Mono,monospace',fontSize:9,color:'#00C896',border:'1px solid #00C89640',padding:'2px 8px',borderRadius:3,background:'rgba(0,200,150,0.08)'}}>✓ CALIBRADO</span>}
-        {ecgMode!=='cardiaco'&&<span style={{fontFamily:'Space Mono,monospace',fontSize:9,color:'#F5A623',border:'1px solid #F5A62344',padding:'2px 8px',borderRadius:3}}>CAL {ecgMode.toUpperCase()}</span>}
-        <div style={{marginLeft:'auto',display:'flex',alignItems:'center',gap:10}}>
-          <span style={{fontFamily:'Space Mono,monospace',fontSize:9,color:'rgba(255,255,255,0.18)'}}>v3.0</span>
-          <button onClick={()=>setRunning(!running)} style={{padding:'4px 14px',fontSize:11,fontFamily:'Space Mono,monospace',fontWeight:700,background:running?'rgba(230,57,70,0.15)':'rgba(0,200,150,0.15)',color:running?'#E63946':'#00C896',border:`1px solid ${running?'#E63946':'#00C896'}`,borderRadius:4,cursor:'pointer'}}>
-            {running?'⏸ PAUSAR':'▶ INICIAR'}
-          </button>
-        </div>
+    <div style={{display:'flex',flexDirection:'column',height:'100vh',background:'#07090F'}}>
+      {/* HEADER */}
+      <div id="app-header" style={{background:'#0B1520',padding:'0 16px',height:52,display:'flex',alignItems:'center',gap:10,flexShrink:0,borderBottom:'1px solid #1A2535'}}>
+        {screen!=='home'?(
+          <button onClick={()=>setScreen('home')} style={{background:'none',border:'none',cursor:'pointer',color:'#00C896',fontSize:22,lineHeight:1,padding:'4px 6px 4px 0',display:'flex',alignItems:'center'}}>←</button>
+        ):(
+          <span style={{fontFamily:'Space Mono,monospace',fontSize:13,fontWeight:700,color:'#00C896',letterSpacing:'0.08em'}}>◉ SEM</span>
+        )}
+        <span style={{fontSize:13,color:'rgba(255,255,255,0.7)',fontWeight:500,flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+          {SCREEN_TITLES[screen]||screen}
+        </span>
+        {anyCal&&screen==='home'&&<span style={{fontFamily:'Space Mono,monospace',fontSize:8,color:'#00C896',border:'1px solid #00C89640',padding:'2px 6px',borderRadius:3,flexShrink:0}}>CAL</span>}
+        <button onClick={()=>setRunning(!running)} style={{padding:'5px 14px',fontSize:11,fontFamily:'Space Mono,monospace',fontWeight:700,background:running?'rgba(230,57,70,0.15)':'rgba(0,200,150,0.15)',color:running?'#E63946':'#00C896',border:`1px solid ${running?'#E63946':'#00C896'}`,borderRadius:4,cursor:'pointer',flexShrink:0}}>
+          {running?'⏸':'▶'}
+        </button>
       </div>
 
-      <div style={{flex:1,display:'flex',overflow:'hidden'}}>
-        {/* MONITOR */}
-        <div id="monitor-panel" style={{width:355,minWidth:300,background:'#07090F',display:'flex',flexDirection:'column',padding:12,gap:10,borderRight:'1px solid #141E2A',flexShrink:0,overflow:'hidden'}}>
-          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-            <div style={{fontFamily:'Space Mono,monospace',fontSize:8,letterSpacing:'0.14em',color:'rgba(0,200,150,0.35)',textTransform:'uppercase'}}>
-              {ecgMode==='cardiaco'?'Lead II':'Cal Signal'}
-              {anyCal&&<span style={{marginLeft:6,color:'#F5A623',fontSize:7}}>CAL</span>}
-            </div>
-            <div style={{fontFamily:'Space Mono,monospace',fontSize:9,color:ri.color,border:`1px solid ${ri.color}40`,padding:'2px 8px',borderRadius:3,background:`${ri.color}12`,animation:dead?'blink 0.8s step-end infinite':'none'}}>
-              {ecgMode!=='cardiaco'?`${ecgMode.toUpperCase()} ${correctedAmplitude.toFixed(2)}mV`:ri.label}
-            </div>
-          </div>
-
-          <WaveCanvas vitals={correctedVitals} rhythm={rhythm} running={running} type="ecg" ecgMode={ecgMode} amplitude={correctedAmplitude} stOffset={stOffset}/>
-
-          <div>
-            <div style={{fontFamily:'Space Mono,monospace',fontSize:8,letterSpacing:'0.12em',color:'rgba(0,191,255,0.35)',marginBottom:3}}>PLETH — SpO₂</div>
-            <WaveCanvas vitals={correctedVitals} rhythm={rhythm} running={running} type="pleth" ecgMode={ecgMode} amplitude={correctedAmplitude} stOffset={stOffset}/>
-          </div>
-
-          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:6}}>
-            <Readout label="FC" value={dead?'---':vitals.hr} unit="bpm" color={hrC} alarm={hrAlarm} calActive={false}/>
-            <Readout label="SpO₂" value={dead?'---':correctedVitals.spo2} unit="%" color={spC} alarm={spo2Alarm} calActive={cal.spo2.applied}/>
-            <Readout label="RESP" value={dead?'---':vitals.resp} unit="rpm" color="#00C896"/>
-          </div>
-
-          <div style={{display:'grid',gridTemplateColumns:'2fr 1fr',gap:6}}>
-            <div style={{background:'rgba(0,0,0,0.45)',border:'1px solid rgba(255,255,255,0.07)',borderRadius:6,padding:'8px 10px',position:'relative'}}>
-              {cal.nibp.applied&&<span style={{position:'absolute',top:4,right:6,fontFamily:'Space Mono,monospace',fontSize:7,color:'#F5A623'}}>CAL</span>}
-              <div style={{fontFamily:'Space Mono,monospace',fontSize:24,fontWeight:700,color:nibpC,textShadow:`0 0 12px ${nibpC}70`,letterSpacing:-1,lineHeight:1}}>
-                {dead?'---':`${correctedVitals.sys}/${correctedVitals.dia}`}
-              </div>
-              <div style={{fontFamily:'Space Mono,monospace',fontSize:8,color:'rgba(255,255,255,0.22)',marginTop:3}}>NIBP mmHg · MAP {dead?'---':map}</div>
-            </div>
-            <div style={{background:'rgba(0,0,0,0.45)',border:'1px solid rgba(255,255,255,0.07)',borderRadius:6,padding:'8px 6px',textAlign:'center',position:'relative'}}>
-              {cal.temp.applied&&<span style={{position:'absolute',top:3,right:4,fontFamily:'Space Mono,monospace',fontSize:7,color:'#F5A623'}}>CAL</span>}
-              <div style={{fontFamily:'Space Mono,monospace',fontSize:22,fontWeight:700,color:tmpC,textShadow:`0 0 10px ${tmpC}70`,lineHeight:1}}>{Number(correctedVitals.temp).toFixed(1)}</div>
-              <div style={{fontFamily:'Space Mono,monospace',fontSize:8,color:`${tmpC}70`,letterSpacing:'0.08em',marginTop:3}}>TEMP</div>
-              <div style={{fontFamily:'Space Mono,monospace',fontSize:8,color:'rgba(255,255,255,0.18)',marginTop:1}}>°C</div>
-            </div>
-          </div>
-
-          {stOffset!==0&&ecgMode==='cardiaco'&&(
-            <div style={{fontFamily:'Space Mono,monospace',fontSize:9,padding:'4px 10px',borderRadius:3,color:stOffset>0?'#F5A623':'#3A86FF',border:`1px solid ${stOffset>0?'#F5A62344':'#3A86FF44'}`,textAlign:'center'}}>
-              ST {stOffset>0?'+':''}{stOffset.toFixed(2)} mV {stOffset>0?'↑ elevación':'↓ depresión'}
-            </div>
-          )}
-
-          {(hrAlarm||spo2Alarm||bpAlarm||tempAlarm)&&(
-            <div style={{display:'flex',gap:4,flexWrap:'wrap'}}>
-              {dead&&<span style={{fontFamily:'Space Mono,monospace',fontSize:9,padding:'3px 8px',borderRadius:3,color:'#E63946',border:'1px solid #E63946',background:'rgba(230,57,70,0.1)',animation:'blink 0.7s step-end infinite'}}>⚠ {rhythm==='vfib'?'FIBRILACIÓN V.':'ASISTOLIA'}</span>}
-              {hrAlarm&&!dead&&<span style={{fontFamily:'Space Mono,monospace',fontSize:9,padding:'3px 8px',borderRadius:3,color:vitals.hr<50?'#3A86FF':'#F5A623',border:`1px solid ${vitals.hr<50?'#3A86FF':'#F5A623'}`}}>{vitals.hr<50?'BRADICARDIA':'TAQUICARDIA'}</span>}
-              {spo2Alarm&&!dead&&<span style={{fontFamily:'Space Mono,monospace',fontSize:9,padding:'3px 8px',borderRadius:3,color:'#E63946',border:'1px solid #E63946'}}>SpO₂ BAJA</span>}
-              {bpAlarm&&!dead&&<span style={{fontFamily:'Space Mono,monospace',fontSize:9,padding:'3px 8px',borderRadius:3,color:correctedVitals.sys>=180?'#E63946':'#3A86FF',border:`1px solid ${correctedVitals.sys>=180?'#E63946':'#3A86FF'}`}}>{correctedVitals.sys>=180?'HTA SEVERA':'HIPOTENSIÓN'}</span>}
-              {tempAlarm&&<span style={{fontFamily:'Space Mono,monospace',fontSize:9,padding:'3px 8px',borderRadius:3,color:'#F5A623',border:'1px solid #F5A623'}}>{correctedVitals.temp>=38.5?'FIEBRE':'HIPOTERMIA'}</span>}
-            </div>
-          )}
-
-          <div style={{marginTop:'auto'}}>
-            <WiFiPanel vitals={correctedVitals} rhythm={rhythm} ecgMode={ecgMode} amplitude={correctedAmplitude} stOffset={stOffset}/>
-          </div>
-        </div>
-
-        {/* CONTROLS */}
-        <div id="controls-panel" style={{flex:1,display:'flex',flexDirection:'column',overflow:'hidden',background:'#F2F4F7'}}>
-          <div id="tab-bar" style={{display:'flex',borderBottom:'1px solid #E2E8F0',background:'white',padding:'0 16px',flexShrink:0,overflowX:'auto'}}>
-            {TABS.map(([id,lbl])=>(
-              <button key={id} onClick={()=>setTab(id)} style={{padding:'11px 14px',fontSize:13,fontWeight:500,background:'none',border:'none',borderBottom:tab===id?'2px solid #00C896':'2px solid transparent',color:tab===id?'#00C896':'#5A6B7E',cursor:'pointer',marginBottom:-1,whiteSpace:'nowrap',display:'flex',alignItems:'center',gap:4}}>
-                {lbl}
-                {id==='cal'&&anyCal&&<span style={{width:7,height:7,borderRadius:'50%',background:'#00C896',display:'inline-block'}}/>}
-              </button>
-            ))}
-          </div>
-
-          <div style={{flex:1,overflow:'auto',padding:16}}>
-            {tab==='sim'&&(
-              <div>
-                <div style={{marginBottom:18}}>
-                  <div style={{...SEC,marginBottom:8}}>Programas clínicos</div>
-                  <div style={{display:'flex',flexWrap:'wrap',gap:5}}>
-                    {PROGRAMS.map(p=>(<button key={p.id} onClick={()=>applyProg(p)} style={{padding:'5px 11px',fontSize:11,fontWeight:500,borderRadius:100,cursor:'pointer',border:prog===p.id?'none':'1px solid #E2E8F0',background:prog===p.id?p.color:'white',color:prog===p.id?'white':'#5A6B7E'}}>{p.label}</button>))}
-                  </div>
-                </div>
-
-                <div style={{marginBottom:18}}>
-                  <div style={{...SEC,marginBottom:8}}>Ritmo ECG</div>
-                  <div style={{display:'flex',flexWrap:'wrap',gap:5}}>
-                    {Object.entries(RHYTHM_INFO).map(([id,info])=>{
-                      const sel=rhythm===id;
-                      const bg=sel?(id==='sinusal'?'#1B2A3B':id==='marcap'?'#9B59B6':['vfib','asistolia'].includes(id)?'#E63946':'#F5A623'):'white';
-                      return <button key={id} onClick={()=>{setRhythm(id);setProg(null);}} style={{padding:'5px 11px',fontSize:11,fontWeight:500,borderRadius:100,cursor:'pointer',border:sel?'none':'1px solid #E2E8F0',background:bg,color:sel?'white':'#5A6B7E'}}>{info.label}</button>;
-                    })}
-                  </div>
-                </div>
-
-                <div style={{marginBottom:18,background:'white',border:'1px solid #E2E8F0',borderRadius:8,padding:14}}>
-                  <div style={{...SEC,marginBottom:12}}>🔧 Señales de calibración ECG</div>
-                  <div style={{marginBottom:12}}>
-                    <div style={{fontSize:11,color:'#5A6B7E',fontWeight:500,marginBottom:6}}>Tipo de señal</div>
-                    <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
-                      {[['cardiaco','❤ Cardíaco','#00C896'],['cuadrada','⬜ Cuadrada','#F5A623'],['senoidal','〜 Senoidal','#3A86FF'],['triangular','△ Triangular','#9B59B6']].map(([id,lbl,col])=>(
-                        <button key={id} onClick={()=>setEcgMode(id)} style={{padding:'6px 14px',fontSize:12,fontWeight:500,borderRadius:6,cursor:'pointer',border:ecgMode===id?'none':'1px solid #E2E8F0',background:ecgMode===id?col:'white',color:ecgMode===id?'white':'#5A6B7E'}}>{lbl}</button>
-                      ))}
-                    </div>
-                  </div>
-                  <div style={{marginBottom:12}}>
-                    <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:5}}>
-                      <span style={{fontSize:11,color:'#5A6B7E',fontWeight:500}}>Amplitud</span>
-                      <span style={{fontFamily:'Space Mono,monospace',fontSize:14,fontWeight:700}}>
-                        {amplitude.toFixed(2)} <span style={{fontSize:10,color:'#aaa'}}>mV</span>
-                        {cal.ecg.applied&&<span style={{fontSize:9,color:'#F5A623',marginLeft:6}}>→ {correctedAmplitude.toFixed(2)} mV (cal)</span>}
-                      </span>
-                    </div>
-                    <input type="range" min={0.1} max={2.0} step={0.05} value={amplitude} onChange={ev=>setAmplitude(parseFloat(ev.target.value))} style={{width:'100%',accentColor:'#00C896'}}/>
-                    <div style={{display:'flex',justifyContent:'space-between',fontSize:10,color:'#aaa',marginTop:3}}><span>0.1</span><span style={{color:'#00C896',fontWeight:600}}>1.0 mV std</span><span>2.0</span></div>
-                  </div>
-                  {ecgMode==='cardiaco'&&(
-                    <div>
-                      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:5}}>
-                        <span style={{fontSize:11,color:'#5A6B7E',fontWeight:500}}>Segmento ST</span>
-                        <span style={{fontFamily:'Space Mono,monospace',fontSize:14,fontWeight:700,color:stOffset>0?'#F5A623':stOffset<0?'#3A86FF':'#00C896'}}>{stOffset>0?'+':''}{stOffset.toFixed(2)} <span style={{fontSize:10,color:'#aaa'}}>mV</span></span>
-                      </div>
-                      <input type="range" min={-0.5} max={0.5} step={0.05} value={stOffset} onChange={ev=>setStOffset(parseFloat(ev.target.value))} style={{width:'100%',accentColor:stOffset>0?'#F5A623':stOffset<0?'#3A86FF':'#64748b'}}/>
-                      <div style={{display:'flex',justifyContent:'space-between',fontSize:10,color:'#aaa',marginTop:3}}>
-                        <span style={{color:'#3A86FF'}}>-0.5 depresión</span><span>0 normal</span><span style={{color:'#F5A623'}}>+0.5 elevación</span>
-                      </div>
-                      {stOffset!==0&&<div style={{marginTop:8,padding:'5px 10px',borderRadius:5,background:stOffset>0?'rgba(245,166,35,0.08)':'rgba(58,134,255,0.08)',border:`1px solid ${stOffset>0?'rgba(245,166,35,0.3)':'rgba(58,134,255,0.3)'}`,fontSize:11,color:stOffset>0?'#F5A623':'#3A86FF'}}>
-                        {stOffset>0?`ST +${stOffset.toFixed(2)} mV — isquemia / infarto`:`ST ${stOffset.toFixed(2)} mV — isquemia subendocárdica`}
-                      </div>}
-                      <button onClick={()=>setStOffset(0)} style={{marginTop:6,padding:'3px 10px',fontSize:11,background:'none',border:'1px solid #E2E8F0',borderRadius:4,cursor:'pointer',color:'#5A6B7E'}}>↺ Reset ST</button>
-                    </div>
-                  )}
-                </div>
-
-                <div style={{marginBottom:18,background:'white',border:'1px solid #E2E8F0',borderRadius:8,padding:14}}>
-                  <div style={{...SEC,marginBottom:12}}>💡 Saturómetro — Marca</div>
-                  <div style={{display:'flex',gap:6,marginBottom:12}}>
-                    {Object.entries(SPO2_BRANDS).map(([id,b])=>(<button key={id} onClick={()=>setSpo2Brand(id)} style={{flex:1,padding:'7px 8px',fontSize:11,fontWeight:500,borderRadius:6,cursor:'pointer',border:spo2Brand===id?'none':'1px solid #E2E8F0',background:spo2Brand===id?b.color:'white',color:spo2Brand===id?'white':'#5A6B7E'}}>{b.label}</button>))}
-                  </div>
-                  <div style={{background:'#F8F9FB',borderRadius:6,padding:10,fontSize:11,lineHeight:1.8}}>
-                    <div style={{display:'grid',gridTemplateColumns:'auto 1fr',gap:'2px 12px'}}>
-                      <span style={{color:'#5A6B7E',fontWeight:500}}>Conector:</span><span>{brand.connector}</span>
-                      <span style={{color:'#5A6B7E',fontWeight:500}}>Detección:</span><span>{brand.detect}</span>
-                      <span style={{color:'#5A6B7E',fontWeight:500}}>Notas:</span><span>{brand.notes}</span>
-                    </div>
-                    <div style={{marginTop:8,padding:'5px 10px',borderRadius:5,background:`${brand.color}11`,border:`1px solid ${brand.color}33`,color:brand.color,fontSize:10,fontFamily:'Space Mono,monospace'}}>🔧 HW: {brand.hw}</div>
-                  </div>
-                </div>
-
-                <div style={{marginBottom:18}}>
-                  <div style={{...SEC,marginBottom:8}}>Parámetros</div>
-                  <SL label="FC" k="hr" min={20} max={200} step={1} unit="bpm"/>
-                  <SL label="SpO₂" k="spo2" min={50} max={100} step={1} unit="%"/>
-                  <SL label="SYS" k="sys" min={60} max={260} step={1} unit="mmHg"/>
-                  <SL label="DIA" k="dia" min={30} max={160} step={1} unit="mmHg"/>
-                  <SL label="TEMP" k="temp" min={32.0} max={42.0} step={0.1} unit="°C"/>
-                  <SL label="RESP" k="resp" min={4} max={60} step={1} unit="rpm"/>
-                </div>
-              </div>
-            )}
-            {tab==='cal'&&<CalibrationTab cal={cal} setCal={setCal}/>}
-            {tab==='verif'&&<VerifTab vitals={{hr:correctedVitals.hr,spo2:correctedVitals.spo2,sys:correctedVitals.sys,dia:correctedVitals.dia,temp:correctedVitals.temp}}/>}
-            {tab==='informe'&&<InformeTab eq={eq} setEq={setEq}/>}
-          </div>
-        </div>
+      {/* SCREENS */}
+      <div style={{flex:1,overflow:'hidden',display:'flex',flexDirection:'column'}}>
+        {screen==='home'&&<HomeScreen cv={cv} rhythm={rhythm} running={running} ecgMode={ecgMode} amplitude={corrAmp} stOffset={stOffset} cal={cal} anyCal={anyCal} setScreen={setScreen}/>}
+        {screen==='monitor'&&<MonitorScreen vitals={vitals} setV={setV} cv={cv} rhythm={rhythm} setRhythm={setRhythm} running={running} ecgMode={ecgMode} amplitude={corrAmp} stOffset={stOffset} cal={cal} prog={prog} setProg={setProg} applyProg={applyProg} setScreen={setScreen} ip={ip} setIp={setIp}/>}
+        {screen==='spo2'&&<Spo2Screen vitals={vitals} setV={setV} cv={cv} rhythm={rhythm} setRhythm={setRhythm} running={running} ecgMode={ecgMode} amplitude={corrAmp} stOffset={stOffset} cal={cal} brand={spo2Brand} setBrand={setSpo2Brand}/>}
+        {screen==='ecg'&&<EcgScreen vitals={vitals} setV={setV} cv={cv} rhythm={rhythm} setRhythm={setRhythm} running={running} ecgMode={ecgMode} setEcgMode={setEcgMode} amplitude={amplitude} setAmplitude={setAmplitude} stOffset={stOffset} setStOffset={setStOffset} cal={cal} prog={prog} setProg={setProg} applyProg={applyProg}/>}
+        {screen==='cal'&&<CalScreen cal={cal} setCal={setCal}/>}
+        {screen==='verif'&&<VerifScreen vitals={{hr:cv.hr,spo2:cv.spo2,sys:cv.sys,dia:cv.dia,temp:cv.temp}}/>}
+        {screen==='informe'&&<InformeScreen eq={eq} setEq={setEq}/>}
       </div>
     </div>
   );
@@ -945,10 +818,6 @@ function App(){
 
 ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
 </script>
-<script>
-if('serviceWorker' in navigator){
-  window.addEventListener('load',()=>{ navigator.serviceWorker.register('/sw.js').catch(()=>{}); });
-}
-</script>
+<script>if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('/sw.js').catch(()=>{}));</script>
 </body>
 </html>
