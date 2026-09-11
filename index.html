@@ -339,12 +339,33 @@ function MonitorScreen({vitals,setV,cv,rhythm,setRhythm,running,ecgMode,amplitud
   const dead=rhythm==='vfib'||rhythm==='asistolia';
   const [wsStatus,setWsStatus]=useState('Sin conexión');
   const [wsConn,setWsConn]=useState(false);
+  const [bleConn,setBleConn]=useState(false);
+  const [connMode,setConnMode]=useState('wifi');
+  const bleRef=useRef(null),cmdChar=useRef(null);
+  const hasBLE='bluetooth' in navigator;
   const ws=useRef(null),wsRef=useRef({cv,rhythm});
   useEffect(()=>{wsRef.current={cv,rhythm};},[cv,rhythm]);
   const connect=()=>{
     try{const s=new WebSocket(`ws://${ip}/ws`);s.onopen=()=>{setWsConn(true);setWsStatus('Conectado');};s.onclose=()=>{setWsConn(false);setWsStatus('Desconectado');};s.onerror=()=>setWsStatus('Error');ws.current=s;s._iv=setInterval(()=>{if(s.readyState===WebSocket.OPEN)s.send(JSON.stringify({...wsRef.current,ts:Date.now()}));},500);}catch(e){setWsStatus('Error: '+e.message);}
   };
   const disconnect=()=>{if(ws.current){clearInterval(ws.current._iv);ws.current.close();ws.current=null;}setWsConn(false);setWsStatus('Sin conexión');};
+  const connectBLE=async()=>{
+    try{
+      setWsStatus('Buscando SEM-Sim...');
+      const device=await navigator.bluetooth.requestDevice({filters:[{name:'SEM-Sim'}],optionalServices:['4fafc201-1fb5-459e-8fcc-c5c9c331914b']});
+      const server=await device.gatt.connect();
+      const svc=await server.getPrimaryService('4fafc201-1fb5-459e-8fcc-c5c9c331914b');
+      const vChar=await svc.getCharacteristic('beb5483e-36e1-4688-b7f5-ea07361b26a8');
+      cmdChar.current=await svc.getCharacteristic('cba1d466-344c-4be3-ab3f-189f80dd7518');
+      await vChar.startNotifications();
+      vChar.addEventListener('characteristicvaluechanged',e=>{try{console.log('[BLE]',JSON.parse(new TextDecoder().decode(e.target.value)));}catch{}});
+      device.addEventListener('gattserverdisconnected',()=>{setBleConn(false);setWsStatus('BLE desconectado');cmdChar.current=null;});
+      bleRef.current=device;
+      device._iv=setInterval(async()=>{if(cmdChar.current&&server.connected)try{await cmdChar.current.writeValue(new TextEncoder().encode(JSON.stringify({...wsRef.current,ts:Date.now()})));}catch{}},500);
+      setBleConn(true);setWsStatus('BLE: SEM-Sim ✓');
+    }catch(e){setWsStatus('BLE: '+e.message);}
+  };
+  const disconnectBLE=()=>{if(bleRef.current){clearInterval(bleRef.current._iv);bleRef.current.gatt.disconnect();}cmdChar.current=null;setBleConn(false);setWsStatus('Sin conexión');};
 
   return(
     <div className="screen" style={{display:'flex',flexDirection:'column',height:'100%',overflow:'hidden'}}>
@@ -377,15 +398,38 @@ function MonitorScreen({vitals,setV,cv,rhythm,setRhythm,running,ecgMode,amplitud
         </Sec>
         <Sec icon="📡" title="Conexión ESP32">
           <div style={{paddingTop:8}}>
-            <div style={{display:'flex',gap:8,alignItems:'center',marginBottom:8}}>
-              <div style={{width:8,height:8,borderRadius:'50%',background:wsConn?'#00C896':'#555',boxShadow:wsConn?'0 0 6px #00C896':'none',flexShrink:0}}/>
-              <input value={ip} onChange={e=>setIp(e.target.value)} disabled={wsConn}
-                style={{flex:1,padding:'7px 10px',border:'1px solid #E2E8F0',borderRadius:6,fontSize:13,fontFamily:'Space Mono,monospace',outline:'none'}}/>
-              <button onClick={wsConn?disconnect:connect} style={{padding:'7px 14px',fontSize:12,background:wsConn?'#E63946':'#00C896',color:'white',border:'none',borderRadius:6,cursor:'pointer',fontWeight:600,flexShrink:0}}>
-                {wsConn?'Desconectar':'Conectar'}
-              </button>
+            {/* Mode selector */}
+            <div style={{display:'flex',gap:6,marginBottom:12}}>
+              {[['wifi','📡 WiFi (http://192.168.4.1)'],['ble','🔵 BLE (mantiene internet)']].map(([m,lbl])=>(
+                <button key={m} onClick={()=>setConnMode(m)} style={{flex:1,padding:'6px 4px',fontSize:11,fontWeight:500,borderRadius:6,cursor:'pointer',border:connMode===m?'none':'1px solid #E2E8F0',background:connMode===m?'#1B2A3B':'white',color:connMode===m?'#00C896':'#5A6B7E'}}>{lbl}</button>
+              ))}
             </div>
-            <div style={{fontSize:11,color:'#5A6B7E'}}>{wsStatus}</div>
+
+            {connMode==='wifi'&&(<div>
+              <div style={{display:'flex',gap:8,alignItems:'center',marginBottom:8}}>
+                <div style={{width:8,height:8,borderRadius:'50%',background:wsConn?'#00C896':'#555',boxShadow:wsConn?'0 0 6px #00C896':'none',flexShrink:0}}/>
+                <input value={ip} onChange={e=>setIp(e.target.value)} disabled={wsConn}
+                  style={{flex:1,padding:'7px 10px',border:'1px solid #E2E8F0',borderRadius:6,fontSize:13,fontFamily:'Space Mono,monospace',outline:'none'}}/>
+                <button onClick={wsConn?disconnect:connect} style={{padding:'7px 14px',fontSize:12,background:wsConn?'#E63946':'#00C896',color:'white',border:'none',borderRadius:6,cursor:'pointer',fontWeight:600,flexShrink:0}}>
+                  {wsConn?'Desconectar':'Conectar'}
+                </button>
+              </div>
+              <div style={{fontSize:11,color:'#aaa'}}>Conectate al WiFi "SEM-Simulator" primero, luego abrí http://192.168.4.1</div>
+            </div>)}
+
+            {connMode==='ble'&&(<div>
+              {!hasBLE&&<div style={{fontSize:12,color:'#E63946',padding:'8px',background:'rgba(230,57,70,0.08)',borderRadius:6,border:'1px solid rgba(230,57,70,0.2)'}}>Web Bluetooth no disponible. Usá Chrome en Android.</div>}
+              {hasBLE&&(<div style={{display:'flex',gap:8,alignItems:'center',marginBottom:8}}>
+                <div style={{width:8,height:8,borderRadius:'50%',background:bleConn?'#3A86FF':'#555',boxShadow:bleConn?'0 0 6px #3A86FF':'none',flexShrink:0}}/>
+                <span style={{flex:1,fontSize:13,color:bleConn?'#3A86FF':'#5A6B7E',fontFamily:'Space Mono,monospace'}}>SEM-Sim</span>
+                <button onClick={bleConn?disconnectBLE:connectBLE} style={{padding:'7px 14px',fontSize:12,background:bleConn?'#E63946':'#3A86FF',color:'white',border:'none',borderRadius:6,cursor:'pointer',fontWeight:600}}>
+                  {bleConn?'Desconectar':'Buscar'}
+                </button>
+              </div>)}
+              <div style={{fontSize:11,color:'#aaa'}}>Sin cambiar WiFi — mantiene internet activo</div>
+            </div>)}
+
+            <div style={{fontSize:11,color:'#5A6B7E',marginTop:8}}>{wsStatus}</div>
           </div>
         </Sec>
       </div>
