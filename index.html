@@ -755,7 +755,6 @@ function VerifScreen({vitals, sensorData}){
         {param==='spo2'&&<div style={{display:'grid',gridTemplateColumns:'1fr 1fr auto',gap:8,alignItems:'end'}}>
           {[['tSpo2','Target %'],['mSpo2','Medido %']].map(([k,l])=>(<div key={k}><label style={LBL}>{l}</label><input type="number" value={e[k]} onChange={ev=>setE({...e,[k]:ev.target.value})} style={INP}/></div>))}
           <button onClick={add} style={{padding:'7px 14px',background:'#00C896',color:'white',border:'none',borderRadius:6,fontSize:16,cursor:'pointer',fontWeight:700,height:36,alignSelf:'end'}}>+</button>
-          </div>
         </div>}
         {param==='temp'&&(<div>
           {sensorData&&sensorData.tempRef>0&&<div style={{padding:'6px 12px',background:'rgba(0,200,150,0.08)',border:'1px solid rgba(0,200,150,0.25)',borderRadius:6,fontSize:11,color:'#00C896',marginBottom:8,fontFamily:'Space Mono,monospace'}}>
