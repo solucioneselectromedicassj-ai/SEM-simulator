@@ -476,7 +476,8 @@ function MonitorScreen({vitals,setV,cv,rhythm,setRhythm,running,ecgMode,amplitud
   const ws=useRef(null),wsRef=useRef({cv,rhythm});
   useEffect(()=>{wsRef.current={cv,rhythm};},[cv,rhythm]);
   const connect=()=>{
-    try{const s=new WebSocket(`ws://${ip}/ws`);s.onopen=()=>{setWsConn(true);setWsStatus('Conectado');};s.onclose=()=>{setWsConn(false);setWsStatus('Desconectado');};s.onerror=()=>setWsStatus('Error');ws.current=s;s._iv=setInterval(()=>{if(s.readyState===WebSocket.OPEN)s.send(JSON.stringify({...wsRef.current,ts:Date.now()}));},500);}catch(e){setWsStatus('Error: '+e.message);}
+    try{const s=new WebSocket(`ws://${ip}/ws`);s.onopen=()=>{setWsConn(true);setWsStatus('Conectado');};
+      s.onmessage=e=>{try{const d=JSON.parse(e.data);if(d.type==='sensors')setSensorData(d);}catch{}};s.onclose=()=>{setWsConn(false);setWsStatus('Desconectado');};s.onerror=()=>setWsStatus('Error');ws.current=s;s._iv=setInterval(()=>{if(s.readyState===WebSocket.OPEN)s.send(JSON.stringify({...wsRef.current,ts:Date.now()}));},500);}catch(e){setWsStatus('Error: '+e.message);}
   };
   const disconnect=()=>{if(ws.current){clearInterval(ws.current._iv);ws.current.close();ws.current=null;}setWsConn(false);setWsStatus('Sin conexión');};
   const connectBLE=async()=>{
@@ -488,7 +489,12 @@ function MonitorScreen({vitals,setV,cv,rhythm,setRhythm,running,ecgMode,amplitud
       const vChar=await svc.getCharacteristic('beb5483e-36e1-4688-b7f5-ea07361b26a8');
       cmdChar.current=await svc.getCharacteristic('cba1d466-344c-4be3-ab3f-189f80dd7518');
       await vChar.startNotifications();
-      vChar.addEventListener('characteristicvaluechanged',e=>{try{console.log('[BLE]',JSON.parse(new TextDecoder().decode(e.target.value)));}catch{}});
+      vChar.addEventListener('characteristicvaluechanged',e=>{
+        try{
+          const d=JSON.parse(new TextDecoder().decode(e.target.value));
+          if(d.type==='sensors') setSensorData(d);
+        }catch{}
+      });
       device.addEventListener('gattserverdisconnected',()=>{setBleConn(false);setWsStatus('BLE desconectado');cmdChar.current=null;});
       bleRef.current=device;
       device._iv=setInterval(async()=>{if(cmdChar.current&&server.connected)try{await cmdChar.current.writeValue(new TextEncoder().encode(JSON.stringify({...wsRef.current,ts:Date.now()})));}catch{}},500);
@@ -715,11 +721,17 @@ function calcStat(errors){if(!errors.length)return null;const m=errors.reduce((a
 const errClr=v=>{const a=Math.abs(v);return a<=3?'#00C896':a<=8?'#F5A623':'#E63946';};
 const fmt=(v,d=1)=>isNaN(v)?'—':`${v>0?'+':''}${v.toFixed(d)}`;
 
-function VerifScreen({vitals}){
+function VerifScreen({vitals, sensorData}){
   const [param,setParam]=useState('nibp');
   const [meas,setMeas]=useState([]);
   const [e,setE]=useState({tSys:'',tDia:'',mSys:'',mDia:'',tSpo2:'',mSpo2:'',tTemp:'',mTemp:'',tHr:'',mHr:''});
   useEffect(()=>{setE(p=>({...p,tSys:String(vitals.sys),tDia:String(vitals.dia),tSpo2:String(vitals.spo2),tTemp:String(vitals.temp),tHr:String(vitals.hr)}));},[vitals]);
+  // Auto-cargar temperatura real del DS18B20 cuando llega del ESP32
+  useEffect(()=>{
+    if(sensorData&&sensorData.tempRef&&sensorData.tempRef>0){
+      setE(p=>({...p,tTemp:String(sensorData.tempRef)}));
+    }
+  },[sensorData]);
   const add=()=>{setMeas(p=>[...p,{id:Date.now(),param,...e}]);setE(p=>({...p,mSys:'',mDia:'',mSpo2:'',mTemp:'',mHr:''}));};
   const del=id=>setMeas(p=>p.filter(m=>m.id!==id));
   const fil=meas.filter(m=>m.param===param);
@@ -743,9 +755,14 @@ function VerifScreen({vitals}){
         {param==='spo2'&&<div style={{display:'grid',gridTemplateColumns:'1fr 1fr auto',gap:8,alignItems:'end'}}>
           {[['tSpo2','Target %'],['mSpo2','Medido %']].map(([k,l])=>(<div key={k}><label style={LBL}>{l}</label><input type="number" value={e[k]} onChange={ev=>setE({...e,[k]:ev.target.value})} style={INP}/></div>))}
           <button onClick={add} style={{padding:'7px 14px',background:'#00C896',color:'white',border:'none',borderRadius:6,fontSize:16,cursor:'pointer',fontWeight:700,height:36,alignSelf:'end'}}>+</button>
+          </div>
         </div>}
-        {param==='temp'&&<div style={{display:'grid',gridTemplateColumns:'1fr 1fr auto',gap:8,alignItems:'end'}}>
-          {[['tTemp','Ref °C'],['mTemp','Monitor °C']].map(([k,l])=>(<div key={k}><label style={LBL}>{l}</label><input type="number" step="0.1" value={e[k]} onChange={ev=>setE({...e,[k]:ev.target.value})} style={INP}/></div>))}
+        {param==='temp'&&<div>
+          {sensorData&&sensorData.tempRef>0&&<div style={{padding:'6px 12px',background:'rgba(0,200,150,0.08)',border:'1px solid rgba(0,200,150,0.25)',borderRadius:6,fontSize:11,color:'#00C896',marginBottom:8,fontFamily:'Space Mono,monospace'}}>
+            📡 DS18B20: <b>{sensorData.tempRef.toFixed(1)}°C</b> — cargado como referencia
+          </div>}
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr auto',gap:8,alignItems:'end'}}>
+          {[['tTemp','Ref °C (DS18B20)'],['mTemp','Monitor °C']].map(([k,l])=>(<div key={k}><label style={LBL}>{l}</label><input type="number" step="0.1" value={e[k]} onChange={ev=>setE({...e,[k]:ev.target.value})} style={INP}/></div>))}
           <button onClick={add} style={{padding:'7px 14px',background:'#00C896',color:'white',border:'none',borderRadius:6,fontSize:16,cursor:'pointer',fontWeight:700,height:36,alignSelf:'end'}}>+</button>
         </div>}
         {param==='hr'&&<div style={{display:'grid',gridTemplateColumns:'1fr 1fr auto',gap:8,alignItems:'end'}}>
@@ -930,6 +947,7 @@ function InformeScreen({eq,setEq}){
 function App(){
   const [screen,setScreen]=useState('home');
   const [appReady,setAppReady]=useState(false);
+  const [sensorData,setSensorData]=useState({tempRef:null,pressure:0,battery:0});
   const [connMode,setConnMode]=useState('demo');
   const wsAppRef=useRef(null);
   const [rhythm,setRhythm]=useState('sinusal');
@@ -1004,7 +1022,7 @@ function App(){
         {screen==='spo2'&&<Spo2Screen vitals={vitals} setV={setV} cv={cv} rhythm={rhythm} setRhythm={setRhythm} running={running} ecgMode={ecgMode} amplitude={corrAmp} stOffset={stOffset} cal={cal} brand={spo2Brand} setBrand={setSpo2Brand}/>}
         {screen==='ecg'&&<EcgScreen vitals={vitals} setV={setV} cv={cv} rhythm={rhythm} setRhythm={setRhythm} running={running} ecgMode={ecgMode} setEcgMode={setEcgMode} amplitude={amplitude} setAmplitude={setAmplitude} stOffset={stOffset} setStOffset={setStOffset} cal={cal} prog={prog} setProg={setProg} applyProg={applyProg}/>}
         {screen==='cal'&&<CalScreen cal={cal} setCal={setCal}/>}
-        {screen==='verif'&&<VerifScreen vitals={{hr:cv.hr,spo2:cv.spo2,sys:cv.sys,dia:cv.dia,temp:cv.temp}}/>}
+        {screen==='verif'&&<VerifScreen vitals={{hr:cv.hr,spo2:cv.spo2,sys:cv.sys,dia:cv.dia,temp:cv.temp}} sensorData={sensorData}/>}
         {screen==='informe'&&<InformeScreen eq={eq} setEq={setEq}/>}
       </div>
     </div>
