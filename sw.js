@@ -1,5 +1,9 @@
-const CACHE = 'sem-simulator-v3';
-const ASSETS = ['/', '/index.html', '/manifest.json', '/icon-192.png', '/icon-512.png'];
+const CACHE = 'sem-simulator-v4';
+const ASSETS = [
+  '/', '/index.html', '/manifest.json', '/app.js',
+  '/icon-192.png', '/icon-512.png', '/icon.svg', '/apple-touch-icon.png',
+  '/vendor/react.production.min.js', '/vendor/react-dom.production.min.js',
+];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)));
