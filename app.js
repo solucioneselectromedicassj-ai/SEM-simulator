@@ -1301,7 +1301,7 @@ function ConnectScreen({
       textAlign: 'center',
       marginTop: 8
     }
-  }, "v3.1"));
+  }, "v3.2"));
 }
 
 // ══════════════════════════════════════════════════════
@@ -3377,7 +3377,7 @@ function InformeScreen({
       fontSize: 12,
       color: '#5A6B7E'
     }
-  }, "SEM Simulator v3.1")), /*#__PURE__*/React.createElement("div", {
+  }, "SEM Simulator v3.2")), /*#__PURE__*/React.createElement("div", {
     style: {
       textAlign: 'right'
     }
@@ -3435,7 +3435,7 @@ function InformeScreen({
       lineHeight: 1.6,
       marginBottom: 24
     }
-  }, "Verificaci\xF3n realizada con SEM Simulator v3.1 calibrado. Criterios: NIBP \u2192 AAMI SP10/ISO 81060-2 \xB7 SpO\u2082 \u2192 ISO 9919 \xB7 Temperatura \u2192 IEC 60601-2-56."), /*#__PURE__*/React.createElement("div", {
+  }, "Verificaci\xF3n realizada con SEM Simulator v3.2 calibrado. Criterios: NIBP \u2192 AAMI SP10/ISO 81060-2 \xB7 SpO\u2082 \u2192 ISO 9919 \xB7 Temperatura \u2192 IEC 60601-2-56."), /*#__PURE__*/React.createElement("div", {
     style: {
       display: 'grid',
       gridTemplateColumns: '1fr 1fr',
