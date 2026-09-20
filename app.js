@@ -825,7 +825,8 @@ function MonitorDisplay({
   amplitude,
   stOffset,
   cal,
-  compact
+  compact,
+  tempIsReal
 }) {
   const dead = rhythm === 'vfib' || rhythm === 'asistolia';
   const ri = RHYTHM_INFO[rhythm] || RHYTHM_INFO.sinusal;
@@ -925,7 +926,7 @@ function MonitorDisplay({
     color: tmpC,
     alarm: cv.temp >= 38.5 || cv.temp < 35.5,
     small: true,
-    cal: cal?.temp?.applied
+    cal: cal?.temp?.applied && !tempIsReal
   })), /*#__PURE__*/React.createElement("div", {
     style: {
       background: 'rgba(0,0,0,0.5)',
@@ -1048,6 +1049,41 @@ function ConnectScreen({
       if (sock.readyState === WebSocket.OPEN || sock.readyState === WebSocket.CONNECTING) sock.close();
     };
   }, []);
+
+  // Busca un dispositivo BLE ya autorizado antes (API de "permisos
+  // persistentes" de Web Bluetooth) y reconecta directo, SIN mostrar el
+  // selector — así no hay que volver a elegir "SEM-Sim" de una lista cada
+  // vez que se corta la conexión. Si el navegador no soporta esto, o el
+  // módulo no está a la vista, no hace nada (silencioso, no es un error).
+  const reconnectKnownBLE = async () => {
+    if (!hasBLE || !navigator.bluetooth.getDevices) return null;
+    try {
+      const devices = await navigator.bluetooth.getDevices();
+      const known = devices.find(d => d.name === 'SEM-Simulator' || d.name === 'SEM-Sim');
+      if (!known) return null;
+      const server = await known.gatt.connect();
+      return {
+        device: known,
+        server
+      };
+    } catch (e) {
+      return null;
+    }
+  };
+
+  // Al abrir la pantalla: si ya autorizamos el módulo antes, probamos
+  // reconectar solos en segundo plano, sin molestar si no se puede.
+  useEffect(() => {
+    if (isEsp) return;
+    (async () => {
+      const conn = await reconnectKnownBLE();
+      if (conn) {
+        setConnecting(true);
+        setStatus('¡Reconectado por BLE!');
+        setTimeout(() => onConnect('ble', conn), 600);
+      }
+    })();
+  }, []);
   const connectWifi = () => {
     if (isHttps) {
       setStatus('WiFi no disponible desde esta página (HTTPS). Entrá a http://192.168.4.1 desde la red del módulo SEM, o usá Bluetooth / modo demo.');
@@ -1078,6 +1114,13 @@ function ConnectScreen({
     setConnecting(true);
     setStatus('Buscando SEM-Sim por BLE...');
     try {
+      // Si el navegador ya lo autorizó antes, reconectar directo sin selector
+      const known = await reconnectKnownBLE();
+      if (known) {
+        setStatus('¡Conectado por BLE!');
+        setTimeout(() => onConnect('ble', known), 600);
+        return;
+      }
       const device = await navigator.bluetooth.requestDevice({
         filters: [{
           name: 'SEM-Simulator'
@@ -1301,7 +1344,7 @@ function ConnectScreen({
       textAlign: 'center',
       marginTop: 8
     }
-  }, "v3.2"));
+  }, "v3.3"));
 }
 
 // ══════════════════════════════════════════════════════
@@ -1386,7 +1429,8 @@ function HomeScreen({
   cal,
   anyCal,
   setScreen,
-  sensorData
+  sensorData,
+  tempIsReal
 }) {
   const dead = rhythm === 'vfib' || rhythm === 'asistolia';
   const calCount = ['nibp', 'temp', 'ecg', 'spo2'].filter(k => cal[k].applied).length;
@@ -1410,7 +1454,8 @@ function HomeScreen({
     amplitude: amplitude,
     stOffset: stOffset,
     cal: cal,
-    compact: true
+    compact: true,
+    tempIsReal: tempIsReal
   })), /*#__PURE__*/React.createElement("div", {
     style: {
       flex: 1,
@@ -1429,7 +1474,7 @@ function HomeScreen({
     icon: "\uD83D\uDDA5\uFE0F",
     title: "Monitor",
     value: dead ? '---' : `${cv.sys}/${cv.dia}`,
-    sub: `FC ${cv.hr} · SpO₂ ${cv.spo2}% · ${Number(cv.temp).toFixed(1)}°C${sensorData && sensorData.tempRef > 0 ? ' · 🌡️' + sensorData.tempRef.toFixed(1) + '°C real' : ''}`,
+    sub: `FC ${cv.hr} · SpO₂ ${cv.spo2}% · ${Number(cv.temp).toFixed(1)}°C${sensorData && sensorData.tempRef > 0 ? ' 🌡️ real' : ''}`,
     color: "#00C896",
     onClick: () => setScreen('monitor')
   }), /*#__PURE__*/React.createElement(HomeCard, {
@@ -1495,7 +1540,8 @@ function MonitorScreen({
   setProg,
   applyProg,
   setScreen,
-  connMode
+  connMode,
+  tempIsReal
 }) {
   const dead = rhythm === 'vfib' || rhythm === 'asistolia';
   return /*#__PURE__*/React.createElement("div", {
@@ -1517,7 +1563,8 @@ function MonitorScreen({
     ecgMode: ecgMode,
     amplitude: amplitude,
     stOffset: stOffset,
-    cal: cal
+    cal: cal,
+    tempIsReal: tempIsReal
   })), /*#__PURE__*/React.createElement("div", {
     style: {
       flex: 1,
@@ -3377,7 +3424,7 @@ function InformeScreen({
       fontSize: 12,
       color: '#5A6B7E'
     }
-  }, "SEM Simulator v3.2")), /*#__PURE__*/React.createElement("div", {
+  }, "SEM Simulator v3.3")), /*#__PURE__*/React.createElement("div", {
     style: {
       textAlign: 'right'
     }
@@ -3435,7 +3482,7 @@ function InformeScreen({
       lineHeight: 1.6,
       marginBottom: 24
     }
-  }, "Verificaci\xF3n realizada con SEM Simulator v3.2 calibrado. Criterios: NIBP \u2192 AAMI SP10/ISO 81060-2 \xB7 SpO\u2082 \u2192 ISO 9919 \xB7 Temperatura \u2192 IEC 60601-2-56."), /*#__PURE__*/React.createElement("div", {
+  }, "Verificaci\xF3n realizada con SEM Simulator v3.3 calibrado. Criterios: NIBP \u2192 AAMI SP10/ISO 81060-2 \xB7 SpO\u2082 \u2192 ISO 9919 \xB7 Temperatura \u2192 IEC 60601-2-56."), /*#__PURE__*/React.createElement("div", {
     style: {
       display: 'grid',
       gridTemplateColumns: '1fr 1fr',
@@ -3506,6 +3553,20 @@ function App() {
   useEffect(() => {
     localStorage.setItem('sem_cal', JSON.stringify(cal));
   }, [cal]);
+
+  // Confirmar antes de cerrar la pestaña/salir si hay una conexión activa
+  // al módulo, para no cortarla por un toque accidental (atrás, cerrar,
+  // cambiar de app). El navegador muestra su propio diálogo de confirmación
+  // (el texto lo define el navegador, no se puede personalizar).
+  useEffect(() => {
+    if (connMode === 'demo') return;
+    const handler = e => {
+      e.preventDefault();
+      e.returnValue = '';
+    };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [connMode]);
 
   // Ref con valores actuales para los intervals de WiFi y BLE
   // (evita closure stale — siempre manda lo que hay en pantalla)
@@ -3588,11 +3649,16 @@ function App() {
   };
 
   // Corrected values
+  // TEMP: si hay un sensor real (DS18B20) reportando, mostrar SU lectura
+  // directamente (es la referencia real, no tiene sentido corregirla con
+  // el offset de calibración). Sin sensor real conectado (demo, o antes
+  // de recibir el primer dato), se usa el valor simulado como siempre.
+  const realTemp = sensorData && sensorData.tempRef > 0;
   const cv = {
     ...vitals,
     sys: Math.round(vitals.sys + (cal.nibp.applied ? cal.nibp.offset : 0)),
     dia: Math.round(vitals.dia + (cal.nibp.applied ? cal.nibp.offset : 0)),
-    temp: parseFloat((vitals.temp + (cal.temp.applied ? cal.temp.offset : 0)).toFixed(1)),
+    temp: realTemp ? parseFloat(sensorData.tempRef.toFixed(1)) : parseFloat((vitals.temp + (cal.temp.applied ? cal.temp.offset : 0)).toFixed(1)),
     spo2: Math.round(vitals.spo2 + (cal.spo2.applied ? cal.spo2.offset : 0))
   };
   const corrAmp = amplitude * (cal.ecg.applied ? cal.ecg.gain : 1);
@@ -3714,7 +3780,8 @@ function App() {
     cal: cal,
     anyCal: anyCal,
     setScreen: setScreen,
-    sensorData: sensorData
+    sensorData: sensorData,
+    tempIsReal: realTemp
   }), screen === 'monitor' && /*#__PURE__*/React.createElement(MonitorScreen, {
     vitals: vitals,
     setV: setV,
@@ -3730,7 +3797,8 @@ function App() {
     setProg: setProg,
     applyProg: applyProg,
     setScreen: setScreen,
-    connMode: connMode
+    connMode: connMode,
+    tempIsReal: realTemp
   }), screen === 'spo2' && /*#__PURE__*/React.createElement(Spo2Screen, {
     vitals: vitals,
     setV: setV,

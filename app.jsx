@@ -212,7 +212,7 @@ const SliderRow = NumControl;
 // ══════════════════════════════════════════════════════
 // MONITOR DISPLAY (panel oscuro reutilizable)
 // ══════════════════════════════════════════════════════
-function MonitorDisplay({cv,rhythm,running,ecgMode,amplitude,stOffset,cal,compact}){
+function MonitorDisplay({cv,rhythm,running,ecgMode,amplitude,stOffset,cal,compact,tempIsReal}){
   const dead=rhythm==='vfib'||rhythm==='asistolia';
   const ri=RHYTHM_INFO[rhythm]||RHYTHM_INFO.sinusal;
   const hrC=dead?'#E63946':cv.hr<50?'#3A86FF':cv.hr>120?'#F5A623':'#00C896';
@@ -243,7 +243,7 @@ function MonitorDisplay({cv,rhythm,running,ecgMode,amplitude,stOffset,cal,compac
         <Readout label="FC" value={dead?'---':cv.hr} unit="bpm" color={hrC} alarm={dead||cv.hr<50||cv.hr>120} small/>
         <Readout label="SpO₂" value={dead?'---':cv.spo2} unit="%" color={spC} alarm={dead||cv.spo2<90} small cal={cal?.spo2?.applied}/>
         <Readout label="RESP" value={dead?'---':cv.resp} unit="rpm" color="#00C896" small/>
-        <Readout label="TEMP" value={dead?'---':Number(cv.temp).toFixed(1)} unit="°C" color={tmpC} alarm={cv.temp>=38.5||cv.temp<35.5} small cal={cal?.temp?.applied}/>
+        <Readout label="TEMP" value={dead?'---':Number(cv.temp).toFixed(1)} unit="°C" color={tmpC} alarm={cv.temp>=38.5||cv.temp<35.5} small cal={cal?.temp?.applied&&!tempIsReal}/>
       </div>
       {/* NIBP */}
       <div style={{background:'rgba(0,0,0,0.5)',border:'1px solid rgba(255,255,255,0.07)',borderRadius:6,padding:'8px 12px',position:'relative'}}>
@@ -295,6 +295,36 @@ function ConnectScreen({onConnect,onDemo}){
     return()=>{if(sock.readyState===WebSocket.OPEN||sock.readyState===WebSocket.CONNECTING)sock.close();};
   },[]);
 
+  // Busca un dispositivo BLE ya autorizado antes (API de "permisos
+  // persistentes" de Web Bluetooth) y reconecta directo, SIN mostrar el
+  // selector — así no hay que volver a elegir "SEM-Sim" de una lista cada
+  // vez que se corta la conexión. Si el navegador no soporta esto, o el
+  // módulo no está a la vista, no hace nada (silencioso, no es un error).
+  const reconnectKnownBLE=async()=>{
+    if(!hasBLE||!navigator.bluetooth.getDevices)return null;
+    try{
+      const devices=await navigator.bluetooth.getDevices();
+      const known=devices.find(d=>d.name==='SEM-Simulator'||d.name==='SEM-Sim');
+      if(!known)return null;
+      const server=await known.gatt.connect();
+      return{device:known,server};
+    }catch(e){return null;}
+  };
+
+  // Al abrir la pantalla: si ya autorizamos el módulo antes, probamos
+  // reconectar solos en segundo plano, sin molestar si no se puede.
+  useEffect(()=>{
+    if(isEsp)return;
+    (async()=>{
+      const conn=await reconnectKnownBLE();
+      if(conn){
+        setConnecting(true);
+        setStatus('¡Reconectado por BLE!');
+        setTimeout(()=>onConnect('ble',conn),600);
+      }
+    })();
+  },[]);
+
   const connectWifi=()=>{
     if(isHttps){
       setStatus('WiFi no disponible desde esta página (HTTPS). Entrá a http://192.168.4.1 desde la red del módulo SEM, o usá Bluetooth / modo demo.');
@@ -312,6 +342,13 @@ function ConnectScreen({onConnect,onDemo}){
   const connectBLE=async()=>{
     setConnecting(true);setStatus('Buscando SEM-Sim por BLE...');
     try{
+      // Si el navegador ya lo autorizó antes, reconectar directo sin selector
+      const known=await reconnectKnownBLE();
+      if(known){
+        setStatus('¡Conectado por BLE!');
+        setTimeout(()=>onConnect('ble',known),600);
+        return;
+      }
       const device=await navigator.bluetooth.requestDevice({filters:[{name:'SEM-Simulator'},{name:'SEM-Sim'}],optionalServices:['4fafc201-1fb5-459e-8fcc-c5c9c331914b']});
       const server=await device.gatt.connect();
       setStatus('¡Conectado por BLE!');
@@ -375,7 +412,7 @@ function ConnectScreen({onConnect,onDemo}){
         Modo demo (sin hardware)
       </button>
 
-      <div style={{fontFamily:'Space Mono,monospace',fontSize:9,color:'rgba(255,255,255,0.15)',textAlign:'center',marginTop:8}}>v3.1</div>
+      <div style={{fontFamily:'Space Mono,monospace',fontSize:9,color:'rgba(255,255,255,0.15)',textAlign:'center',marginTop:8}}>v3.3</div>
     </div>
   );
 }
@@ -400,20 +437,20 @@ function HomeCard({icon,title,value,sub,color,onClick,badge}){
   );
 }
 
-function HomeScreen({cv,rhythm,running,ecgMode,amplitude,stOffset,cal,anyCal,setScreen,sensorData}){
+function HomeScreen({cv,rhythm,running,ecgMode,amplitude,stOffset,cal,anyCal,setScreen,sensorData,tempIsReal}){
   const dead=rhythm==='vfib'||rhythm==='asistolia';
   const calCount=['nibp','temp','ecg','spo2'].filter(k=>cal[k].applied).length;
   return(
     <div className="screen" style={{display:'flex',flexDirection:'column',height:'100%',overflow:'hidden'}}>
       {/* Mini monitor strip */}
       <div style={{flexShrink:0}}>
-        <MonitorDisplay cv={cv} rhythm={rhythm} running={running} ecgMode={ecgMode} amplitude={amplitude} stOffset={stOffset} cal={cal} compact={true}/>
+        <MonitorDisplay cv={cv} rhythm={rhythm} running={running} ecgMode={ecgMode} amplitude={amplitude} stOffset={stOffset} cal={cal} compact={true} tempIsReal={tempIsReal}/>
       </div>
       {/* Cards grid */}
       <div style={{flex:1,overflow:'auto',padding:14,background:'#0B1520'}}>
         <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:10}}>
           <HomeCard icon="🖥️" title="Monitor" value={dead?'---':`${cv.sys}/${cv.dia}`}
-            sub={`FC ${cv.hr} · SpO₂ ${cv.spo2}% · ${Number(cv.temp).toFixed(1)}°C${sensorData&&sensorData.tempRef>0?' · 🌡️'+sensorData.tempRef.toFixed(1)+'°C real':''}`}
+            sub={`FC ${cv.hr} · SpO₂ ${cv.spo2}% · ${Number(cv.temp).toFixed(1)}°C${sensorData&&sensorData.tempRef>0?' 🌡️ real':''}`}
             color="#00C896" onClick={()=>setScreen('monitor')}/>
           <HomeCard icon="💧" title="Saturometría" value={dead?'---':`${cv.spo2}%`}
             sub={`FC ${cv.hr} bpm · ${RHYTHM_INFO[rhythm]?.label||rhythm}`}
@@ -439,12 +476,12 @@ function HomeScreen({cv,rhythm,running,ecgMode,amplitude,stOffset,cal,anyCal,set
 // ══════════════════════════════════════════════════════
 // MONITOR SCREEN
 // ══════════════════════════════════════════════════════
-function MonitorScreen({vitals,setV,cv,rhythm,setRhythm,running,ecgMode,amplitude,stOffset,cal,prog,setProg,applyProg,setScreen,connMode}){
+function MonitorScreen({vitals,setV,cv,rhythm,setRhythm,running,ecgMode,amplitude,stOffset,cal,prog,setProg,applyProg,setScreen,connMode,tempIsReal}){
   const dead=rhythm==='vfib'||rhythm==='asistolia';
   return(
     <div className="screen" style={{display:'flex',flexDirection:'column',height:'100%',overflow:'hidden'}}>
       <div style={{flexShrink:0}}>
-        <MonitorDisplay cv={cv} rhythm={rhythm} running={running} ecgMode={ecgMode} amplitude={amplitude} stOffset={stOffset} cal={cal}/>
+        <MonitorDisplay cv={cv} rhythm={rhythm} running={running} ecgMode={ecgMode} amplitude={amplitude} stOffset={stOffset} cal={cal} tempIsReal={tempIsReal}/>
       </div>
       <div style={{flex:1,overflow:'auto',background:'#F2F4F7'}}>
         <Sec icon="⚡" title="Programas clínicos" defaultOpen={true} color="#1A2535">
@@ -834,7 +871,7 @@ function InformeScreen({eq,setEq}){
           <div>
             <div style={{fontFamily:'Space Mono,monospace',fontSize:9,letterSpacing:'0.15em',color:'#aaa',textTransform:'uppercase'}}>Soluciones Electromédicas SJ — SEM</div>
             <div style={{fontSize:18,fontWeight:700,color:'#1A2535',marginTop:3}}>Informe de Verificación</div>
-            <div style={{fontSize:12,color:'#5A6B7E'}}>SEM Simulator v3.1</div>
+            <div style={{fontSize:12,color:'#5A6B7E'}}>SEM Simulator v3.3</div>
           </div>
           <div style={{textAlign:'right'}}><div style={{fontFamily:'Space Mono,monospace',fontSize:11,fontWeight:700}}>{fecha}</div>{eq.ot&&<div style={{fontFamily:'Space Mono,monospace',fontSize:10,color:'#aaa'}}>OT #{eq.ot}</div>}</div>
         </div>
@@ -843,7 +880,7 @@ function InformeScreen({eq,setEq}){
           {[['Marca',eq.marca],['Modelo',eq.modelo],['N° Serie',eq.serie],['Cliente',eq.cliente],['Técnico',eq.tecnico]].map(([l,v])=>(<div key={l} style={{display:'flex',gap:8,fontSize:12}}><span style={{color:'#5A6B7E',minWidth:70}}>{l}:</span><span style={{fontWeight:600}}>{v||'—'}</span></div>))}
         </div>
         <div style={{height:1,background:'#E2E8F0',margin:'12px 0'}}/>
-        <div style={{fontSize:11,color:'#aaa',lineHeight:1.6,marginBottom:24}}>Verificación realizada con SEM Simulator v3.1 calibrado. Criterios: NIBP → AAMI SP10/ISO 81060-2 · SpO₂ → ISO 9919 · Temperatura → IEC 60601-2-56.</div>
+        <div style={{fontSize:11,color:'#aaa',lineHeight:1.6,marginBottom:24}}>Verificación realizada con SEM Simulator v3.3 calibrado. Criterios: NIBP → AAMI SP10/ISO 81060-2 · SpO₂ → ISO 9919 · Temperatura → IEC 60601-2-56.</div>
         <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:40,marginTop:40}}>
           <div style={{borderTop:'1px solid #ccc',paddingTop:8,fontSize:12,color:'#aaa'}}>Firma y sello del técnico</div>
           <div style={{borderTop:'1px solid #ccc',paddingTop:8,fontSize:12,color:'#aaa'}}>Conformidad del cliente</div>
@@ -874,6 +911,17 @@ function App(){
   const [cal,setCal]=useState(()=>{try{return JSON.parse(localStorage.getItem('sem_cal'))||defaultCal;}catch{return defaultCal;}});
   const [ip,setIp]=useState('192.168.4.1');
   useEffect(()=>{localStorage.setItem('sem_cal',JSON.stringify(cal));},[cal]);
+
+  // Confirmar antes de cerrar la pestaña/salir si hay una conexión activa
+  // al módulo, para no cortarla por un toque accidental (atrás, cerrar,
+  // cambiar de app). El navegador muestra su propio diálogo de confirmación
+  // (el texto lo define el navegador, no se puede personalizar).
+  useEffect(()=>{
+    if(connMode==='demo')return;
+    const handler=e=>{e.preventDefault();e.returnValue='';};
+    window.addEventListener('beforeunload',handler);
+    return()=>window.removeEventListener('beforeunload',handler);
+  },[connMode]);
 
   // Ref con valores actuales para los intervals de WiFi y BLE
   // (evita closure stale — siempre manda lo que hay en pantalla)
@@ -920,11 +968,16 @@ function App(){
   const applyProg=p=>{setVitals({hr:p.hr,spo2:p.spo2,sys:p.sys,dia:p.dia,temp:p.temp,resp:p.resp});setRhythm(p.rhythm);setProg(p.id);};
 
   // Corrected values
+  // TEMP: si hay un sensor real (DS18B20) reportando, mostrar SU lectura
+  // directamente (es la referencia real, no tiene sentido corregirla con
+  // el offset de calibración). Sin sensor real conectado (demo, o antes
+  // de recibir el primer dato), se usa el valor simulado como siempre.
+  const realTemp=sensorData&&sensorData.tempRef>0;
   const cv={
     ...vitals,
     sys:Math.round(vitals.sys+(cal.nibp.applied?cal.nibp.offset:0)),
     dia:Math.round(vitals.dia+(cal.nibp.applied?cal.nibp.offset:0)),
-    temp:parseFloat((vitals.temp+(cal.temp.applied?cal.temp.offset:0)).toFixed(1)),
+    temp:realTemp?parseFloat(sensorData.tempRef.toFixed(1)):parseFloat((vitals.temp+(cal.temp.applied?cal.temp.offset:0)).toFixed(1)),
     spo2:Math.round(vitals.spo2+(cal.spo2.applied?cal.spo2.offset:0)),
   };
   const corrAmp=amplitude*(cal.ecg.applied?cal.ecg.gain:1);
@@ -960,8 +1013,8 @@ function App(){
 
       {/* SCREENS */}
       <div style={{flex:1,overflow:'hidden',display:'flex',flexDirection:'column'}}>
-        {screen==='home'&&<HomeScreen cv={cv} rhythm={rhythm} running={running} ecgMode={ecgMode} amplitude={corrAmp} stOffset={stOffset} cal={cal} anyCal={anyCal} setScreen={setScreen} sensorData={sensorData}/>}
-        {screen==='monitor'&&<MonitorScreen vitals={vitals} setV={setV} cv={cv} rhythm={rhythm} setRhythm={setRhythm} running={running} ecgMode={ecgMode} amplitude={corrAmp} stOffset={stOffset} cal={cal} prog={prog} setProg={setProg} applyProg={applyProg} setScreen={setScreen} connMode={connMode}/>}
+        {screen==='home'&&<HomeScreen cv={cv} rhythm={rhythm} running={running} ecgMode={ecgMode} amplitude={corrAmp} stOffset={stOffset} cal={cal} anyCal={anyCal} setScreen={setScreen} sensorData={sensorData} tempIsReal={realTemp}/>}
+        {screen==='monitor'&&<MonitorScreen vitals={vitals} setV={setV} cv={cv} rhythm={rhythm} setRhythm={setRhythm} running={running} ecgMode={ecgMode} amplitude={corrAmp} stOffset={stOffset} cal={cal} prog={prog} setProg={setProg} applyProg={applyProg} setScreen={setScreen} connMode={connMode} tempIsReal={realTemp}/>}
         {screen==='spo2'&&<Spo2Screen vitals={vitals} setV={setV} cv={cv} rhythm={rhythm} setRhythm={setRhythm} running={running} ecgMode={ecgMode} amplitude={corrAmp} stOffset={stOffset} cal={cal} brand={spo2Brand} setBrand={setSpo2Brand}/>}
         {screen==='ecg'&&<EcgScreen vitals={vitals} setV={setV} cv={cv} rhythm={rhythm} setRhythm={setRhythm} running={running} ecgMode={ecgMode} setEcgMode={setEcgMode} amplitude={amplitude} setAmplitude={setAmplitude} stOffset={stOffset} setStOffset={setStOffset} cal={cal} prog={prog} setProg={setProg} applyProg={applyProg}/>}
         {screen==='cal'&&<CalScreen cal={cal} setCal={setCal}/>}
