@@ -433,7 +433,7 @@ function ConnectScreen({onConnect,onDemo}){
         Modo demo (sin hardware)
       </button>
 
-      <div style={{fontFamily:'Space Mono,monospace',fontSize:9,color:'rgba(255,255,255,0.15)',textAlign:'center',marginTop:8}}>v3.4</div>
+      <div style={{fontFamily:'Space Mono,monospace',fontSize:9,color:'rgba(255,255,255,0.15)',textAlign:'center',marginTop:8}}>v3.5</div>
     </div>
   );
 }
@@ -505,6 +505,20 @@ function ChipRow({items,selectedId,onSelect,getBg}){
   );
 }
 
+// Desplegable compacto anidado (para agrupar chips dentro de un Sec)
+function MiniSec({title,defaultOpen,children}){
+  const [open,setOpen]=useState(defaultOpen??false);
+  return(
+    <div>
+      <button onClick={()=>setOpen(!open)} style={{width:'100%',display:'flex',justifyContent:'space-between',alignItems:'center',background:'#F8F9FB',border:'1px solid #E2E8F0',borderRadius:8,padding:'9px 12px',cursor:'pointer'}}>
+        <span style={{fontSize:11,color:'#5A6B7E',fontWeight:600,textTransform:'uppercase'}}>{title}</span>
+        <span style={{color:'#94A3B8',transform:open?'rotate(180deg)':'none',transition:'transform 0.2s',display:'flex',flexShrink:0}}><IconChevron size={14}/></span>
+      </button>
+      {open&&<div style={{paddingTop:8}}>{children}</div>}
+    </div>
+  );
+}
+
 // ══════════════════════════════════════════════════════
 // MONITOR SCREEN
 // ══════════════════════════════════════════════════════
@@ -517,15 +531,13 @@ function MonitorScreen({vitals,setV,cv,rhythm,setRhythm,running,ecgMode,amplitud
       </div>
       <div style={{flex:1,overflow:'auto',background:'#F2F4F7'}}>
         <Sec icon={<IconZap size={18} color="#5A6B7E"/>} title="Tipos / Accesos rápidos" defaultOpen={true} color="#1A2535">
-          <div style={{paddingTop:4,display:'flex',flexDirection:'column',gap:10}}>
-            <div>
-              <div style={{fontSize:10,color:'#94A3B8',fontWeight:600,textTransform:'uppercase',marginBottom:5}}>Programas clínicos</div>
+          <div style={{paddingTop:4,display:'flex',flexDirection:'column',gap:8}}>
+            <MiniSec title="Programas clínicos">
               <ChipRow items={PROGRAMS} selectedId={prog} onSelect={applyProg}/>
-            </div>
-            <div>
-              <div style={{fontSize:10,color:'#94A3B8',fontWeight:600,textTransform:'uppercase',marginBottom:5}}>Ritmo ECG</div>
+            </MiniSec>
+            <MiniSec title="Ritmo ECG">
               <ChipRow items={rhythmItems} selectedId={rhythm} onSelect={it=>{setRhythm(it.id);setProg(null);}}/>
-            </div>
+            </MiniSec>
           </div>
         </Sec>
         <Sec icon={<IconSliders size={18} color="#5A6B7E"/>} title="Parámetros">
@@ -571,17 +583,14 @@ function Spo2Screen({vitals,setV,cv,rhythm,setRhythm,running,ecgMode,amplitude,s
       {/* Controls */}
       <div style={{flex:1,overflow:'auto',background:'#F2F4F7'}}>
         <Sec icon={<IconZap size={18} color="#5A6B7E"/>} title="Tipos / Accesos rápidos" defaultOpen={true}>
-          <div style={{paddingTop:4,display:'flex',flexDirection:'column',gap:10}}>
-            <div>
-              <div style={{fontSize:10,color:'#94A3B8',fontWeight:600,textTransform:'uppercase',marginBottom:5}}>Programas clínicos</div>
+          <div style={{paddingTop:4,display:'flex',flexDirection:'column',gap:8}}>
+            <MiniSec title="Programas clínicos">
               <ChipRow items={PROGRAMS} selectedId={prog} onSelect={applyProg}/>
-            </div>
-            <div>
-              <div style={{fontSize:10,color:'#94A3B8',fontWeight:600,textTransform:'uppercase',marginBottom:5}}>Ritmo cardíaco</div>
+            </MiniSec>
+            <MiniSec title="Ritmo cardíaco">
               <ChipRow items={Object.entries(RHYTHM_INFO).map(([id,info])=>({id,label:info.label,color:id==='sinusal'?'#22344C':id==='marcap'?'#9B59B6':['vfib','asistolia'].includes(id)?'#E63946':'#F5A623'}))} selectedId={rhythm} onSelect={it=>{setRhythm(it.id);setProg(null);}}/>
-            </div>
-            <div>
-              <div style={{fontSize:10,color:'#94A3B8',fontWeight:600,textTransform:'uppercase',marginBottom:5}}>Marca / Protocolo de sonda</div>
+            </MiniSec>
+            <MiniSec title="Marca / Protocolo de sonda">
               <div style={{display:'flex',gap:6,marginBottom:10}}>
                 {Object.entries(SPO2_BRANDS).map(([id,bb])=>(
                   <button key={id} onClick={()=>setBrand(id)} style={{flex:1,padding:'8px 6px',fontSize:11,fontWeight:600,borderRadius:8,cursor:'pointer',border:brand===id?'none':'1px solid #E2E8F0',background:brand===id?bb.color:'white',color:brand===id?'white':'#5A6B7E'}}>{bb.label}</button>
@@ -593,7 +602,7 @@ function Spo2Screen({vitals,setV,cv,rhythm,setRhythm,running,ecgMode,amplitude,s
                 <div><b>Algoritmo:</b> {b.notes}</div>
                 <div style={{marginTop:8,padding:'6px 10px',borderRadius:5,background:b.color+'15',border:`1px solid ${b.color}33`,color:b.color,fontSize:11,fontFamily:'Space Mono,monospace'}}>HW: {b.hw}</div>
               </div>
-            </div>
+            </MiniSec>
           </div>
         </Sec>
         <Sec icon={<IconSliders size={18} color="#5A6B7E"/>} title="Parámetros">
@@ -640,23 +649,20 @@ function EcgScreen({vitals,setV,cv,rhythm,setRhythm,running,ecgMode,setEcgMode,a
       </div>
       <div style={{flex:1,overflow:'auto',background:'#F2F4F7'}}>
         <Sec icon={<IconZap size={18} color="#5A6B7E"/>} title="Tipos / Accesos rápidos" defaultOpen={true}>
-          <div style={{paddingTop:4,display:'flex',flexDirection:'column',gap:10}}>
-            <div>
-              <div style={{fontSize:10,color:'#94A3B8',fontWeight:600,textTransform:'uppercase',marginBottom:5}}>Tipo de señal</div>
+          <div style={{paddingTop:4,display:'flex',flexDirection:'column',gap:8}}>
+            <MiniSec title="Tipo de señal" defaultOpen={true}>
               <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
                 {[['cardiaco','❤ Cardíaco','#00C896'],['cuadrada','⬜ Cuadrada','#F5A623'],['senoidal','〜 Senoidal','#3A86FF'],['triangular','△ Triangular','#9B59B6']].map(([id,lbl,col])=>(
                   <button key={id} onClick={()=>setEcgMode(id)} style={{padding:'7px 14px',fontSize:12,fontWeight:500,borderRadius:8,cursor:'pointer',border:ecgMode===id?'none':'1px solid #E2E8F0',background:ecgMode===id?col:'white',color:ecgMode===id?'white':'#5A6B7E'}}>{lbl}</button>
                 ))}
               </div>
-            </div>
-            <div>
-              <div style={{fontSize:10,color:'#94A3B8',fontWeight:600,textTransform:'uppercase',marginBottom:5}}>Ritmo ECG</div>
+            </MiniSec>
+            <MiniSec title="Ritmo ECG">
               <ChipRow items={Object.entries(RHYTHM_INFO).map(([id,info])=>({id,label:info.label,color:id==='sinusal'?'#22344C':id==='marcap'?'#9B59B6':['vfib','asistolia'].includes(id)?'#E63946':'#F5A623'}))} selectedId={rhythm} onSelect={it=>setRhythm(it.id)}/>
-            </div>
-            <div>
-              <div style={{fontSize:10,color:'#94A3B8',fontWeight:600,textTransform:'uppercase',marginBottom:5}}>Programas clínicos</div>
+            </MiniSec>
+            <MiniSec title="Programas clínicos">
               <ChipRow items={PROGRAMS} selectedId={prog} onSelect={applyProg}/>
-            </div>
+            </MiniSec>
           </div>
         </Sec>
         <Sec icon={<IconSliders size={18} color="#5A6B7E"/>} title="Parámetros">
@@ -905,7 +911,7 @@ function InformeScreen({eq,setEq}){
           <div>
             <div style={{fontFamily:'Space Mono,monospace',fontSize:9,letterSpacing:'0.15em',color:'#aaa',textTransform:'uppercase'}}>Soluciones Electromédicas SJ — SEM</div>
             <div style={{fontSize:18,fontWeight:700,color:'#1A2535',marginTop:3}}>Informe de Verificación</div>
-            <div style={{fontSize:12,color:'#5A6B7E'}}>SEM Simulator v3.4</div>
+            <div style={{fontSize:12,color:'#5A6B7E'}}>SEM Simulator v3.5</div>
           </div>
           <div style={{textAlign:'right'}}><div style={{fontFamily:'Space Mono,monospace',fontSize:11,fontWeight:700}}>{fecha}</div>{eq.ot&&<div style={{fontFamily:'Space Mono,monospace',fontSize:10,color:'#aaa'}}>OT #{eq.ot}</div>}</div>
         </div>
@@ -914,7 +920,7 @@ function InformeScreen({eq,setEq}){
           {[['Marca',eq.marca],['Modelo',eq.modelo],['N° Serie',eq.serie],['Cliente',eq.cliente],['Técnico',eq.tecnico]].map(([l,v])=>(<div key={l} style={{display:'flex',gap:8,fontSize:12}}><span style={{color:'#5A6B7E',minWidth:70}}>{l}:</span><span style={{fontWeight:600}}>{v||'—'}</span></div>))}
         </div>
         <div style={{height:1,background:'#E2E8F0',margin:'12px 0'}}/>
-        <div style={{fontSize:11,color:'#aaa',lineHeight:1.6,marginBottom:24}}>Verificación realizada con SEM Simulator v3.4 calibrado. Criterios: NIBP → AAMI SP10/ISO 81060-2 · SpO₂ → ISO 9919 · Temperatura → IEC 60601-2-56.</div>
+        <div style={{fontSize:11,color:'#aaa',lineHeight:1.6,marginBottom:24}}>Verificación realizada con SEM Simulator v3.5 calibrado. Criterios: NIBP → AAMI SP10/ISO 81060-2 · SpO₂ → ISO 9919 · Temperatura → IEC 60601-2-56.</div>
         <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:40,marginTop:40}}>
           <div style={{borderTop:'1px solid #ccc',paddingTop:8,fontSize:12,color:'#aaa'}}>Firma y sello del técnico</div>
           <div style={{borderTop:'1px solid #ccc',paddingTop:8,fontSize:12,color:'#aaa'}}>Conformidad del cliente</div>

@@ -1500,7 +1500,7 @@ function ConnectScreen({
       textAlign: 'center',
       marginTop: 8
     }
-  }, "v3.4"));
+  }, "v3.5"));
 }
 
 // ══════════════════════════════════════════════════════
@@ -1714,6 +1714,50 @@ function ChipRow({
   }));
 }
 
+// Desplegable compacto anidado (para agrupar chips dentro de un Sec)
+function MiniSec({
+  title,
+  defaultOpen,
+  children
+}) {
+  const [open, setOpen] = useState(defaultOpen ?? false);
+  return /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("button", {
+    onClick: () => setOpen(!open),
+    style: {
+      width: '100%',
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      background: '#F8F9FB',
+      border: '1px solid #E2E8F0',
+      borderRadius: 8,
+      padding: '9px 12px',
+      cursor: 'pointer'
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 11,
+      color: '#5A6B7E',
+      fontWeight: 600,
+      textTransform: 'uppercase'
+    }
+  }, title), /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: '#94A3B8',
+      transform: open ? 'rotate(180deg)' : 'none',
+      transition: 'transform 0.2s',
+      display: 'flex',
+      flexShrink: 0
+    }
+  }, /*#__PURE__*/React.createElement(IconChevron, {
+    size: 14
+  }))), open && /*#__PURE__*/React.createElement("div", {
+    style: {
+      paddingTop: 8
+    }
+  }, children));
+}
+
 // ══════════════════════════════════════════════════════
 // MONITOR SCREEN
 // ══════════════════════════════════════════════════════
@@ -1778,29 +1822,17 @@ function MonitorScreen({
       paddingTop: 4,
       display: 'flex',
       flexDirection: 'column',
-      gap: 10
+      gap: 8
     }
-  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: 10,
-      color: '#94A3B8',
-      fontWeight: 600,
-      textTransform: 'uppercase',
-      marginBottom: 5
-    }
-  }, "Programas cl\xEDnicos"), /*#__PURE__*/React.createElement(ChipRow, {
+  }, /*#__PURE__*/React.createElement(MiniSec, {
+    title: "Programas cl\xEDnicos"
+  }, /*#__PURE__*/React.createElement(ChipRow, {
     items: PROGRAMS,
     selectedId: prog,
     onSelect: applyProg
-  })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: 10,
-      color: '#94A3B8',
-      fontWeight: 600,
-      textTransform: 'uppercase',
-      marginBottom: 5
-    }
-  }, "Ritmo ECG"), /*#__PURE__*/React.createElement(ChipRow, {
+  })), /*#__PURE__*/React.createElement(MiniSec, {
+    title: "Ritmo ECG"
+  }, /*#__PURE__*/React.createElement(ChipRow, {
     items: rhythmItems,
     selectedId: rhythm,
     onSelect: it => {
@@ -1994,29 +2026,17 @@ function Spo2Screen({
       paddingTop: 4,
       display: 'flex',
       flexDirection: 'column',
-      gap: 10
+      gap: 8
     }
-  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: 10,
-      color: '#94A3B8',
-      fontWeight: 600,
-      textTransform: 'uppercase',
-      marginBottom: 5
-    }
-  }, "Programas cl\xEDnicos"), /*#__PURE__*/React.createElement(ChipRow, {
+  }, /*#__PURE__*/React.createElement(MiniSec, {
+    title: "Programas cl\xEDnicos"
+  }, /*#__PURE__*/React.createElement(ChipRow, {
     items: PROGRAMS,
     selectedId: prog,
     onSelect: applyProg
-  })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: 10,
-      color: '#94A3B8',
-      fontWeight: 600,
-      textTransform: 'uppercase',
-      marginBottom: 5
-    }
-  }, "Ritmo card\xEDaco"), /*#__PURE__*/React.createElement(ChipRow, {
+  })), /*#__PURE__*/React.createElement(MiniSec, {
+    title: "Ritmo card\xEDaco"
+  }, /*#__PURE__*/React.createElement(ChipRow, {
     items: Object.entries(RHYTHM_INFO).map(([id, info]) => ({
       id,
       label: info.label,
@@ -2027,15 +2047,9 @@ function Spo2Screen({
       setRhythm(it.id);
       setProg(null);
     }
-  })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: 10,
-      color: '#94A3B8',
-      fontWeight: 600,
-      textTransform: 'uppercase',
-      marginBottom: 5
-    }
-  }, "Marca / Protocolo de sonda"), /*#__PURE__*/React.createElement("div", {
+  })), /*#__PURE__*/React.createElement(MiniSec, {
+    title: "Marca / Protocolo de sonda"
+  }, /*#__PURE__*/React.createElement("div", {
     style: {
       display: 'flex',
       gap: 6,
@@ -2268,17 +2282,12 @@ function EcgScreen({
       paddingTop: 4,
       display: 'flex',
       flexDirection: 'column',
-      gap: 10
+      gap: 8
     }
-  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: 10,
-      color: '#94A3B8',
-      fontWeight: 600,
-      textTransform: 'uppercase',
-      marginBottom: 5
-    }
-  }, "Tipo de se\xF1al"), /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement(MiniSec, {
+    title: "Tipo de se\xF1al",
+    defaultOpen: true
+  }, /*#__PURE__*/React.createElement("div", {
     style: {
       display: 'flex',
       gap: 6,
@@ -2297,15 +2306,9 @@ function EcgScreen({
       background: ecgMode === id ? col : 'white',
       color: ecgMode === id ? 'white' : '#5A6B7E'
     }
-  }, lbl)))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: 10,
-      color: '#94A3B8',
-      fontWeight: 600,
-      textTransform: 'uppercase',
-      marginBottom: 5
-    }
-  }, "Ritmo ECG"), /*#__PURE__*/React.createElement(ChipRow, {
+  }, lbl)))), /*#__PURE__*/React.createElement(MiniSec, {
+    title: "Ritmo ECG"
+  }, /*#__PURE__*/React.createElement(ChipRow, {
     items: Object.entries(RHYTHM_INFO).map(([id, info]) => ({
       id,
       label: info.label,
@@ -2313,15 +2316,9 @@ function EcgScreen({
     })),
     selectedId: rhythm,
     onSelect: it => setRhythm(it.id)
-  })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
-    style: {
-      fontSize: 10,
-      color: '#94A3B8',
-      fontWeight: 600,
-      textTransform: 'uppercase',
-      marginBottom: 5
-    }
-  }, "Programas cl\xEDnicos"), /*#__PURE__*/React.createElement(ChipRow, {
+  })), /*#__PURE__*/React.createElement(MiniSec, {
+    title: "Programas cl\xEDnicos"
+  }, /*#__PURE__*/React.createElement(ChipRow, {
     items: PROGRAMS,
     selectedId: prog,
     onSelect: applyProg
@@ -3631,7 +3628,7 @@ function InformeScreen({
       fontSize: 12,
       color: '#5A6B7E'
     }
-  }, "SEM Simulator v3.4")), /*#__PURE__*/React.createElement("div", {
+  }, "SEM Simulator v3.5")), /*#__PURE__*/React.createElement("div", {
     style: {
       textAlign: 'right'
     }
@@ -3689,7 +3686,7 @@ function InformeScreen({
       lineHeight: 1.6,
       marginBottom: 24
     }
-  }, "Verificaci\xF3n realizada con SEM Simulator v3.4 calibrado. Criterios: NIBP \u2192 AAMI SP10/ISO 81060-2 \xB7 SpO\u2082 \u2192 ISO 9919 \xB7 Temperatura \u2192 IEC 60601-2-56."), /*#__PURE__*/React.createElement("div", {
+  }, "Verificaci\xF3n realizada con SEM Simulator v3.5 calibrado. Criterios: NIBP \u2192 AAMI SP10/ISO 81060-2 \xB7 SpO\u2082 \u2192 ISO 9919 \xB7 Temperatura \u2192 IEC 60601-2-56."), /*#__PURE__*/React.createElement("div", {
     style: {
       display: 'grid',
       gridTemplateColumns: '1fr 1fr',
