@@ -1,3 +1,4 @@
+function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 const {
   useState,
   useEffect,
@@ -324,6 +325,159 @@ const defaultCal = {
 };
 
 // ══════════════════════════════════════════════════════
+// ICONOS (SVG en línea — sin fuentes de emoji ni CDN externo,
+// para no reintroducir dependencias que rompan el uso offline)
+// ══════════════════════════════════════════════════════
+const Icon = ({
+  d,
+  size = 20,
+  color = 'currentColor',
+  children
+}) => /*#__PURE__*/React.createElement("svg", {
+  width: size,
+  height: size,
+  viewBox: "0 0 24 24",
+  fill: "none",
+  stroke: color,
+  strokeWidth: "2",
+  strokeLinecap: "round",
+  strokeLinejoin: "round"
+}, children || /*#__PURE__*/React.createElement("path", {
+  d: d
+}));
+const IconMonitor = p => /*#__PURE__*/React.createElement(Icon, p, /*#__PURE__*/React.createElement("rect", {
+  x: "2",
+  y: "3",
+  width: "20",
+  height: "14",
+  rx: "2"
+}), /*#__PURE__*/React.createElement("line", {
+  x1: "8",
+  y1: "21",
+  x2: "16",
+  y2: "21"
+}), /*#__PURE__*/React.createElement("line", {
+  x1: "12",
+  y1: "17",
+  x2: "12",
+  y2: "21"
+}));
+const IconActivity = p => /*#__PURE__*/React.createElement(Icon, _extends({}, p, {
+  d: "M22 12h-4l-3 9L9 3l-3 9H2"
+}));
+const IconDroplet = p => /*#__PURE__*/React.createElement(Icon, _extends({}, p, {
+  d: "M12 2.69s6 7.15 6 11a6 6 0 0 1-12 0c0-3.85 6-11 6-11z"
+}));
+const IconSettings = p => /*#__PURE__*/React.createElement(Icon, p, /*#__PURE__*/React.createElement("circle", {
+  cx: "12",
+  cy: "12",
+  r: "3"
+}), /*#__PURE__*/React.createElement("path", {
+  d: "M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"
+}));
+const IconClipboard = p => /*#__PURE__*/React.createElement(Icon, p, /*#__PURE__*/React.createElement("path", {
+  d: "M9 2h6a1 1 0 0 1 1 1v2H8V3a1 1 0 0 1 1-1z"
+}), /*#__PURE__*/React.createElement("rect", {
+  x: "5",
+  y: "4",
+  width: "14",
+  height: "18",
+  rx: "2"
+}), /*#__PURE__*/React.createElement("line", {
+  x1: "9",
+  y1: "11",
+  x2: "15",
+  y2: "11"
+}), /*#__PURE__*/React.createElement("line", {
+  x1: "9",
+  y1: "15",
+  x2: "15",
+  y2: "15"
+}));
+const IconFileText = p => /*#__PURE__*/React.createElement(Icon, p, /*#__PURE__*/React.createElement("path", {
+  d: "M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
+}), /*#__PURE__*/React.createElement("polyline", {
+  points: "14 2 14 8 20 8"
+}), /*#__PURE__*/React.createElement("line", {
+  x1: "8",
+  y1: "13",
+  x2: "16",
+  y2: "13"
+}), /*#__PURE__*/React.createElement("line", {
+  x1: "8",
+  y1: "17",
+  x2: "16",
+  y2: "17"
+}));
+const IconZap = p => /*#__PURE__*/React.createElement(Icon, _extends({}, p, {
+  d: "M13 2L4.09 12.11a1 1 0 0 0 .76 1.65h5.4l-1.1 8.24 8.91-10.11a1 1 0 0 0-.76-1.65h-5.4z"
+}));
+const IconSliders = p => /*#__PURE__*/React.createElement(Icon, p, /*#__PURE__*/React.createElement("line", {
+  x1: "4",
+  y1: "21",
+  x2: "4",
+  y2: "14"
+}), /*#__PURE__*/React.createElement("line", {
+  x1: "4",
+  y1: "10",
+  x2: "4",
+  y2: "3"
+}), /*#__PURE__*/React.createElement("line", {
+  x1: "12",
+  y1: "21",
+  x2: "12",
+  y2: "12"
+}), /*#__PURE__*/React.createElement("line", {
+  x1: "12",
+  y1: "8",
+  x2: "12",
+  y2: "3"
+}), /*#__PURE__*/React.createElement("line", {
+  x1: "20",
+  y1: "21",
+  x2: "20",
+  y2: "16"
+}), /*#__PURE__*/React.createElement("line", {
+  x1: "20",
+  y1: "12",
+  x2: "20",
+  y2: "3"
+}), /*#__PURE__*/React.createElement("line", {
+  x1: "1",
+  y1: "14",
+  x2: "7",
+  y2: "14"
+}), /*#__PURE__*/React.createElement("line", {
+  x1: "9",
+  y1: "8",
+  x2: "15",
+  y2: "8"
+}), /*#__PURE__*/React.createElement("line", {
+  x1: "17",
+  y1: "16",
+  x2: "23",
+  y2: "16"
+}));
+const IconWifi = p => /*#__PURE__*/React.createElement(Icon, p, /*#__PURE__*/React.createElement("path", {
+  d: "M5 12.55a11 11 0 0 1 14.08 0"
+}), /*#__PURE__*/React.createElement("path", {
+  d: "M1.42 9a16 16 0 0 1 21.16 0"
+}), /*#__PURE__*/React.createElement("path", {
+  d: "M8.53 16.11a6 6 0 0 1 6.95 0"
+}), /*#__PURE__*/React.createElement("line", {
+  x1: "12",
+  y1: "20",
+  x2: "12.01",
+  y2: "20"
+}));
+const IconBluetooth = p => /*#__PURE__*/React.createElement(Icon, _extends({}, p, {
+  d: "M6.5 6.5l11 11L12 23V1l5.5 5.5-11 11"
+}));
+const IconChevron = p => /*#__PURE__*/React.createElement(Icon, _extends({}, p, {
+  d: "M6 9l6 6 6-6"
+}));
+
+// ══════════════════════════════════════════════════════
 // ECG MATH
 // ══════════════════════════════════════════════════════
 function gauss(x, c, w, a) {
@@ -403,7 +557,7 @@ function drawWave(canvas, buf, color, label, yMin, yMax) {
     pB = 12;
   const pH = H - pT - pB,
     pW = W - pL - pR;
-  ctx.fillStyle = '#07090F';
+  ctx.fillStyle = '#0E1826';
   ctx.fillRect(0, 0, W, H);
   ctx.strokeStyle = 'rgba(255,255,255,0.04)';
   ctx.lineWidth = 1;
@@ -645,13 +799,15 @@ function Sec({
     }
   }, title)), /*#__PURE__*/React.createElement("span", {
     style: {
-      color: '#aaa',
-      fontSize: 12,
+      color: '#94A3B8',
       transform: open ? 'rotate(180deg)' : 'none',
       transition: 'transform 0.2s',
-      flexShrink: 0
+      flexShrink: 0,
+      display: 'flex'
     }
-  }, "\u25BC")), open && /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement(IconChevron, {
+    size: 16
+  }))), open && /*#__PURE__*/React.createElement("div", {
     style: {
       padding: '4px 16px 16px',
       animation: 'fadeIn 0.15s ease'
@@ -837,7 +993,7 @@ function MonitorDisplay({
   const map = Math.round(cv.dia + (cv.sys - cv.dia) / 3);
   return /*#__PURE__*/React.createElement("div", {
     style: {
-      background: '#07090F',
+      background: '#0E1826',
       padding: '10px 12px',
       display: 'flex',
       flexDirection: 'column',
@@ -1147,7 +1303,7 @@ function ConnectScreen({
       alignItems: 'center',
       justifyContent: 'center',
       height: '100vh',
-      background: '#07090F',
+      background: '#0E1826',
       padding: 24,
       gap: 20
     }
@@ -1183,7 +1339,7 @@ function ConnectScreen({
       width: '100%',
       maxWidth: 300,
       height: 60,
-      background: '#0B1520',
+      background: '#152238',
       borderRadius: 8,
       display: 'flex',
       alignItems: 'center',
@@ -1265,7 +1421,7 @@ function ConnectScreen({
     style: {
       padding: '8px 18px',
       background: '#00C896',
-      color: '#07090F',
+      color: '#0E1826',
       border: 'none',
       borderRadius: 6,
       fontSize: 13,
@@ -1344,7 +1500,7 @@ function ConnectScreen({
       textAlign: 'center',
       marginTop: 8
     }
-  }, "v3.3"));
+  }, "v3.4"));
 }
 
 // ══════════════════════════════════════════════════════
@@ -1362,7 +1518,7 @@ function HomeCard({
   return /*#__PURE__*/React.createElement("button", {
     onClick: onClick,
     style: {
-      background: '#0E1A2B',
+      background: '#1A2A42',
       border: `1px solid ${color}25`,
       borderRadius: 12,
       padding: '16px 14px',
@@ -1383,7 +1539,8 @@ function HomeCard({
     }
   }, /*#__PURE__*/React.createElement("span", {
     style: {
-      fontSize: 22
+      display: 'flex',
+      color
     }
   }, icon), badge && /*#__PURE__*/React.createElement("span", {
     style: {
@@ -1419,51 +1576,41 @@ function HomeCard({
     }
   }, sub)));
 }
+
+// Home: solo tarjetas de navegación — sin vista previa en vivo, para que
+// entrar a la app sea elegir a dónde ir, no ver el monitor ya corriendo.
 function HomeScreen({
   cv,
   rhythm,
-  running,
-  ecgMode,
   amplitude,
-  stOffset,
   cal,
   anyCal,
   setScreen,
-  sensorData,
-  tempIsReal
+  sensorData
 }) {
   const dead = rhythm === 'vfib' || rhythm === 'asistolia';
   const calCount = ['nibp', 'temp', 'ecg', 'spo2'].filter(k => cal[k].applied).length;
   return /*#__PURE__*/React.createElement("div", {
     className: "screen",
     style: {
-      display: 'flex',
-      flexDirection: 'column',
       height: '100%',
-      overflow: 'hidden'
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      flexShrink: 0
-    }
-  }, /*#__PURE__*/React.createElement(MonitorDisplay, {
-    cv: cv,
-    rhythm: rhythm,
-    running: running,
-    ecgMode: ecgMode,
-    amplitude: amplitude,
-    stOffset: stOffset,
-    cal: cal,
-    compact: true,
-    tempIsReal: tempIsReal
-  })), /*#__PURE__*/React.createElement("div", {
-    style: {
-      flex: 1,
       overflow: 'auto',
-      padding: 14,
-      background: '#0B1520'
+      padding: 16,
+      background: '#152238'
     }
   }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginBottom: 14
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontFamily: 'Space Mono,monospace',
+      fontSize: 10,
+      color: 'rgba(255,255,255,0.35)',
+      letterSpacing: '0.1em',
+      textTransform: 'uppercase'
+    }
+  }, "Eleg\xED una pantalla")), /*#__PURE__*/React.createElement("div", {
     style: {
       display: 'grid',
       gridTemplateColumns: '1fr 1fr',
@@ -1471,33 +1618,41 @@ function HomeScreen({
       marginBottom: 10
     }
   }, /*#__PURE__*/React.createElement(HomeCard, {
-    icon: "\uD83D\uDDA5\uFE0F",
+    icon: /*#__PURE__*/React.createElement(IconMonitor, {
+      size: 22
+    }),
     title: "Monitor",
     value: dead ? '---' : `${cv.sys}/${cv.dia}`,
-    sub: `FC ${cv.hr} · SpO₂ ${cv.spo2}% · ${Number(cv.temp).toFixed(1)}°C${sensorData && sensorData.tempRef > 0 ? ' 🌡️ real' : ''}`,
+    sub: `FC ${cv.hr} · SpO₂ ${cv.spo2}% · ${Number(cv.temp).toFixed(1)}°C${sensorData && sensorData.tempRef > 0 ? ' · real' : ''}`,
     color: "#00C896",
     onClick: () => setScreen('monitor')
   }), /*#__PURE__*/React.createElement(HomeCard, {
-    icon: "\uD83D\uDCA7",
-    title: "Saturometr\xEDa",
-    value: dead ? '---' : `${cv.spo2}%`,
-    sub: `FC ${cv.hr} bpm · ${RHYTHM_INFO[rhythm]?.label || rhythm}`,
-    color: "#00BFFF",
-    onClick: () => setScreen('spo2')
-  }), /*#__PURE__*/React.createElement(HomeCard, {
-    icon: "\u2764\uFE0F",
+    icon: /*#__PURE__*/React.createElement(IconActivity, {
+      size: 22
+    }),
     title: "ECG",
     value: dead ? '---' : `${amplitude.toFixed(1)} mV`,
-    sub: ecgMode === 'cardiaco' ? `${RHYTHM_INFO[rhythm]?.label || rhythm}` : `Cal: ${ecgMode}`,
+    sub: RHYTHM_INFO[rhythm]?.label || rhythm,
     color: "#00C896",
     onClick: () => setScreen('ecg')
   }), /*#__PURE__*/React.createElement(HomeCard, {
-    icon: "\uD83D\uDD27",
-    title: "Calibraci\xF3n",
+    icon: /*#__PURE__*/React.createElement(IconDroplet, {
+      size: 22
+    }),
+    title: "Saturometr\xEDa",
+    value: dead ? '---' : `${cv.spo2}%`,
+    sub: `FC ${cv.hr} bpm`,
+    color: "#00BFFF",
+    onClick: () => setScreen('spo2')
+  }), /*#__PURE__*/React.createElement(HomeCard, {
+    icon: /*#__PURE__*/React.createElement(IconSettings, {
+      size: 22
+    }),
+    title: "Ajustes",
     value: `${calCount}/4`,
-    sub: calCount === 4 ? 'Todos calibrados' : calCount === 0 ? 'Sin calibrar' : 'Calibración parcial',
+    sub: calCount === 4 ? 'Todos calibrados' : calCount === 0 ? 'Calibración y conexión' : 'Calibración parcial',
     color: "#F5A623",
-    onClick: () => setScreen('cal'),
+    onClick: () => setScreen('ajustes'),
     badge: anyCal ? 'ACTIVO' : null
   })), /*#__PURE__*/React.createElement("div", {
     style: {
@@ -1506,20 +1661,57 @@ function HomeScreen({
       gap: 10
     }
   }, /*#__PURE__*/React.createElement(HomeCard, {
-    icon: "\uD83D\uDCCB",
+    icon: /*#__PURE__*/React.createElement(IconClipboard, {
+      size: 22
+    }),
     title: "Verificaci\xF3n",
     value: "Medir",
     sub: "Registrar lecturas del equipo",
     color: "#9B59B6",
     onClick: () => setScreen('verif')
   }), /*#__PURE__*/React.createElement(HomeCard, {
-    icon: "\uD83D\uDCC4",
+    icon: /*#__PURE__*/React.createElement(IconFileText, {
+      size: 22
+    }),
     title: "Informe",
     value: "Generar",
     sub: "Certificado de servicio",
     color: "#6C8EBF",
     onClick: () => setScreen('informe')
-  }))));
+  })));
+}
+
+// Fila de chips reutilizable (programas, ritmos, etc.)
+function ChipRow({
+  items,
+  selectedId,
+  onSelect,
+  getBg
+}) {
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      flexWrap: 'wrap',
+      gap: 6
+    }
+  }, items.map(it => {
+    const sel = selectedId === it.id;
+    const bg = sel ? getBg ? getBg(it) : it.color : 'white';
+    return /*#__PURE__*/React.createElement("button", {
+      key: it.id,
+      onClick: () => onSelect(it),
+      style: {
+        padding: '6px 12px',
+        fontSize: 12,
+        fontWeight: 500,
+        borderRadius: 100,
+        cursor: 'pointer',
+        border: sel ? 'none' : '1px solid #E2E8F0',
+        background: bg,
+        color: sel ? 'white' : '#5A6B7E'
+      }
+    }, it.label);
+  }));
 }
 
 // ══════════════════════════════════════════════════════
@@ -1539,11 +1731,13 @@ function MonitorScreen({
   prog,
   setProg,
   applyProg,
-  setScreen,
-  connMode,
   tempIsReal
 }) {
-  const dead = rhythm === 'vfib' || rhythm === 'asistolia';
+  const rhythmItems = Object.entries(RHYTHM_INFO).map(([id, info]) => ({
+    id,
+    label: info.label,
+    color: id === 'sinusal' ? '#22344C' : id === 'marcap' ? '#9B59B6' : ['vfib', 'asistolia'].includes(id) ? '#E63946' : '#F5A623'
+  }));
   return /*#__PURE__*/React.createElement("div", {
     className: "screen",
     style: {
@@ -1572,62 +1766,52 @@ function MonitorScreen({
       background: '#F2F4F7'
     }
   }, /*#__PURE__*/React.createElement(Sec, {
-    icon: "\u26A1",
-    title: "Programas cl\xEDnicos",
+    icon: /*#__PURE__*/React.createElement(IconZap, {
+      size: 18,
+      color: "#5A6B7E"
+    }),
+    title: "Tipos / Accesos r\xE1pidos",
     defaultOpen: true,
     color: "#1A2535"
   }, /*#__PURE__*/React.createElement("div", {
     style: {
+      paddingTop: 4,
       display: 'flex',
-      flexWrap: 'wrap',
-      gap: 6,
-      paddingTop: 4
+      flexDirection: 'column',
+      gap: 10
     }
-  }, PROGRAMS.map(p => /*#__PURE__*/React.createElement("button", {
-    key: p.id,
-    onClick: () => applyProg(p),
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
     style: {
-      padding: '6px 12px',
-      fontSize: 12,
-      fontWeight: 500,
-      borderRadius: 100,
-      cursor: 'pointer',
-      border: prog === p.id ? 'none' : '1px solid #E2E8F0',
-      background: prog === p.id ? p.color : 'white',
-      color: prog === p.id ? 'white' : '#5A6B7E'
+      fontSize: 10,
+      color: '#94A3B8',
+      fontWeight: 600,
+      textTransform: 'uppercase',
+      marginBottom: 5
     }
-  }, p.label)))), /*#__PURE__*/React.createElement(Sec, {
-    icon: "\uD83D\uDC93",
-    title: "Ritmo ECG"
-  }, /*#__PURE__*/React.createElement("div", {
+  }, "Programas cl\xEDnicos"), /*#__PURE__*/React.createElement(ChipRow, {
+    items: PROGRAMS,
+    selectedId: prog,
+    onSelect: applyProg
+  })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
     style: {
-      display: 'flex',
-      flexWrap: 'wrap',
-      gap: 6,
-      paddingTop: 4
+      fontSize: 10,
+      color: '#94A3B8',
+      fontWeight: 600,
+      textTransform: 'uppercase',
+      marginBottom: 5
     }
-  }, Object.entries(RHYTHM_INFO).map(([id, info]) => {
-    const sel = rhythm === id;
-    const bg = sel ? id === 'sinusal' ? '#1B2A3B' : id === 'marcap' ? '#9B59B6' : ['vfib', 'asistolia'].includes(id) ? '#E63946' : '#F5A623' : 'white';
-    return /*#__PURE__*/React.createElement("button", {
-      key: id,
-      onClick: () => {
-        setRhythm(id);
-        setProg(null);
-      },
-      style: {
-        padding: '6px 12px',
-        fontSize: 12,
-        fontWeight: 500,
-        borderRadius: 100,
-        cursor: 'pointer',
-        border: sel ? 'none' : '1px solid #E2E8F0',
-        background: bg,
-        color: sel ? 'white' : '#5A6B7E'
-      }
-    }, info.label);
-  }))), /*#__PURE__*/React.createElement(Sec, {
-    icon: "\uD83C\uDF9B\uFE0F",
+  }, "Ritmo ECG"), /*#__PURE__*/React.createElement(ChipRow, {
+    items: rhythmItems,
+    selectedId: rhythm,
+    onSelect: it => {
+      setRhythm(it.id);
+      setProg(null);
+    }
+  })))), /*#__PURE__*/React.createElement(Sec, {
+    icon: /*#__PURE__*/React.createElement(IconSliders, {
+      size: 18,
+      color: "#5A6B7E"
+    }),
     title: "Par\xE1metros"
   }, /*#__PURE__*/React.createElement("div", {
     style: {
@@ -1681,31 +1865,7 @@ function MonitorScreen({
     step: 1,
     unit: "rpm",
     onChange: v => setV('resp', v)
-  }))), /*#__PURE__*/React.createElement(Sec, {
-    icon: "\uD83D\uDCE1",
-    title: "M\xF3dulo SEM"
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      paddingTop: 8,
-      display: 'flex',
-      alignItems: 'center',
-      gap: 10
-    }
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      width: 8,
-      height: 8,
-      borderRadius: '50%',
-      flexShrink: 0,
-      background: connMode !== 'demo' ? '#00C896' : '#555',
-      boxShadow: connMode !== 'demo' ? '0 0 6px #00C896' : 'none'
-    }
-  }), /*#__PURE__*/React.createElement("span", {
-    style: {
-      fontSize: 12,
-      color: connMode !== 'demo' ? '#00C896' : '#aaa'
-    }
-  }, connMode === 'wifi' ? 'Conectado por WiFi' : connMode === 'ble' ? 'Conectado por Bluetooth' : 'Sin conexión — modo demo')))));
+  })))));
 }
 
 // ══════════════════════════════════════════════════════
@@ -1723,7 +1883,10 @@ function Spo2Screen({
   stOffset,
   cal,
   brand,
-  setBrand
+  setBrand,
+  prog,
+  setProg,
+  applyProg
 }) {
   const dead = rhythm === 'vfib' || rhythm === 'asistolia';
   const spC = cv.spo2 < 90 ? '#E63946' : cv.spo2 < 95 ? '#F5A623' : '#00BFFF';
@@ -1738,7 +1901,7 @@ function Spo2Screen({
     }
   }, /*#__PURE__*/React.createElement("div", {
     style: {
-      background: '#07090F',
+      background: '#0E1826',
       padding: '12px',
       flexShrink: 0
     }
@@ -1820,15 +1983,63 @@ function Spo2Screen({
       background: '#F2F4F7'
     }
   }, /*#__PURE__*/React.createElement(Sec, {
-    icon: "\uD83D\uDCF1",
-    title: "Marca / Protocolo",
+    icon: /*#__PURE__*/React.createElement(IconZap, {
+      size: 18,
+      color: "#5A6B7E"
+    }),
+    title: "Tipos / Accesos r\xE1pidos",
     defaultOpen: true
   }, /*#__PURE__*/React.createElement("div", {
     style: {
+      paddingTop: 4,
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 10
+    }
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 10,
+      color: '#94A3B8',
+      fontWeight: 600,
+      textTransform: 'uppercase',
+      marginBottom: 5
+    }
+  }, "Programas cl\xEDnicos"), /*#__PURE__*/React.createElement(ChipRow, {
+    items: PROGRAMS,
+    selectedId: prog,
+    onSelect: applyProg
+  })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 10,
+      color: '#94A3B8',
+      fontWeight: 600,
+      textTransform: 'uppercase',
+      marginBottom: 5
+    }
+  }, "Ritmo card\xEDaco"), /*#__PURE__*/React.createElement(ChipRow, {
+    items: Object.entries(RHYTHM_INFO).map(([id, info]) => ({
+      id,
+      label: info.label,
+      color: id === 'sinusal' ? '#22344C' : id === 'marcap' ? '#9B59B6' : ['vfib', 'asistolia'].includes(id) ? '#E63946' : '#F5A623'
+    })),
+    selectedId: rhythm,
+    onSelect: it => {
+      setRhythm(it.id);
+      setProg(null);
+    }
+  })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 10,
+      color: '#94A3B8',
+      fontWeight: 600,
+      textTransform: 'uppercase',
+      marginBottom: 5
+    }
+  }, "Marca / Protocolo de sonda"), /*#__PURE__*/React.createElement("div", {
+    style: {
       display: 'flex',
       gap: 6,
-      marginBottom: 12,
-      paddingTop: 8
+      marginBottom: 10
     }
   }, Object.entries(SPO2_BRANDS).map(([id, bb]) => /*#__PURE__*/React.createElement("button", {
     key: id,
@@ -1863,9 +2074,12 @@ function Spo2Screen({
       fontSize: 11,
       fontFamily: 'Space Mono,monospace'
     }
-  }, "\uD83D\uDD27 HW: ", b.hw))), /*#__PURE__*/React.createElement(Sec, {
-    icon: "\uD83C\uDF9B\uFE0F",
-    title: "Par\xE1metros SpO\u2082 / FC"
+  }, "HW: ", b.hw))))), /*#__PURE__*/React.createElement(Sec, {
+    icon: /*#__PURE__*/React.createElement(IconSliders, {
+      size: 18,
+      color: "#5A6B7E"
+    }),
+    title: "Par\xE1metros"
   }, /*#__PURE__*/React.createElement("div", {
     style: {
       paddingTop: 8
@@ -1894,33 +2108,6 @@ function Spo2Screen({
     step: 1,
     unit: "rpm",
     onChange: v => setV('resp', v)
-  }))), /*#__PURE__*/React.createElement(Sec, {
-    icon: "\uD83D\uDC93",
-    title: "Ritmo card\xEDaco"
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: 'flex',
-      flexWrap: 'wrap',
-      gap: 6,
-      paddingTop: 8
-    }
-  }, Object.entries(RHYTHM_INFO).map(([id, info]) => {
-    const sel = rhythm === id;
-    const bg = sel ? id === 'sinusal' ? '#1B2A3B' : id === 'marcap' ? '#9B59B6' : ['vfib', 'asistolia'].includes(id) ? '#E63946' : '#F5A623' : 'white';
-    return /*#__PURE__*/React.createElement("button", {
-      key: id,
-      onClick: () => setRhythm(id),
-      style: {
-        padding: '6px 12px',
-        fontSize: 11,
-        fontWeight: 500,
-        borderRadius: 100,
-        cursor: 'pointer',
-        border: sel ? 'none' : '1px solid #E2E8F0',
-        background: bg,
-        color: sel ? 'white' : '#5A6B7E'
-      }
-    }, info.label);
   })))));
 }
 
@@ -1955,7 +2142,7 @@ function EcgScreen({
     }
   }, /*#__PURE__*/React.createElement("div", {
     style: {
-      background: '#07090F',
+      background: '#0E1826',
       padding: '12px',
       flexShrink: 0
     }
@@ -2070,26 +2257,32 @@ function EcgScreen({
       background: '#F2F4F7'
     }
   }, /*#__PURE__*/React.createElement(Sec, {
-    icon: "\uD83D\uDD27",
-    title: "Se\xF1al de calibraci\xF3n",
+    icon: /*#__PURE__*/React.createElement(IconZap, {
+      size: 18,
+      color: "#5A6B7E"
+    }),
+    title: "Tipos / Accesos r\xE1pidos",
     defaultOpen: true
   }, /*#__PURE__*/React.createElement("div", {
     style: {
-      paddingTop: 8
+      paddingTop: 4,
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 10
     }
-  }, /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
     style: {
-      fontSize: 11,
-      color: '#5A6B7E',
-      fontWeight: 500,
-      marginBottom: 8
+      fontSize: 10,
+      color: '#94A3B8',
+      fontWeight: 600,
+      textTransform: 'uppercase',
+      marginBottom: 5
     }
   }, "Tipo de se\xF1al"), /*#__PURE__*/React.createElement("div", {
     style: {
       display: 'flex',
       gap: 6,
-      flexWrap: 'wrap',
-      marginBottom: 14
+      flexWrap: 'wrap'
     }
   }, [['cardiaco', '❤ Cardíaco', '#00C896'], ['cuadrada', '⬜ Cuadrada', '#F5A623'], ['senoidal', '〜 Senoidal', '#3A86FF'], ['triangular', '△ Triangular', '#9B59B6']].map(([id, lbl, col]) => /*#__PURE__*/React.createElement("button", {
     key: id,
@@ -2104,7 +2297,45 @@ function EcgScreen({
       background: ecgMode === id ? col : 'white',
       color: ecgMode === id ? 'white' : '#5A6B7E'
     }
-  }, lbl))), /*#__PURE__*/React.createElement("div", {
+  }, lbl)))), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 10,
+      color: '#94A3B8',
+      fontWeight: 600,
+      textTransform: 'uppercase',
+      marginBottom: 5
+    }
+  }, "Ritmo ECG"), /*#__PURE__*/React.createElement(ChipRow, {
+    items: Object.entries(RHYTHM_INFO).map(([id, info]) => ({
+      id,
+      label: info.label,
+      color: id === 'sinusal' ? '#22344C' : id === 'marcap' ? '#9B59B6' : ['vfib', 'asistolia'].includes(id) ? '#E63946' : '#F5A623'
+    })),
+    selectedId: rhythm,
+    onSelect: it => setRhythm(it.id)
+  })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 10,
+      color: '#94A3B8',
+      fontWeight: 600,
+      textTransform: 'uppercase',
+      marginBottom: 5
+    }
+  }, "Programas cl\xEDnicos"), /*#__PURE__*/React.createElement(ChipRow, {
+    items: PROGRAMS,
+    selectedId: prog,
+    onSelect: applyProg
+  })))), /*#__PURE__*/React.createElement(Sec, {
+    icon: /*#__PURE__*/React.createElement(IconSliders, {
+      size: 18,
+      color: "#5A6B7E"
+    }),
+    title: "Par\xE1metros"
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      paddingTop: 8
+    }
+  }, /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 11,
       color: '#5A6B7E',
@@ -2137,21 +2368,14 @@ function EcgScreen({
       justifyContent: 'space-between',
       fontSize: 10,
       color: '#aaa',
-      marginBottom: 14
+      marginBottom: 18
     }
   }, /*#__PURE__*/React.createElement("span", null, "0.1"), /*#__PURE__*/React.createElement("span", {
     style: {
       color: '#00C896',
       fontWeight: 600
     }
-  }, "1.0 mV est\xE1ndar"), /*#__PURE__*/React.createElement("span", null, "2.0")))), ecgMode === 'cardiaco' && /*#__PURE__*/React.createElement(Sec, {
-    icon: "\uD83D\uDCC8",
-    title: "Segmento ST"
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      paddingTop: 8
-    }
-  }, /*#__PURE__*/React.createElement("div", {
+  }, "1.0 mV est\xE1ndar"), /*#__PURE__*/React.createElement("span", null, "2.0")), ecgMode === 'cardiaco' && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 11,
       color: '#5A6B7E',
@@ -2216,57 +2440,7 @@ function EcgScreen({
       cursor: 'pointer',
       color: '#5A6B7E'
     }
-  }, "\u21BA Reset ST"))), /*#__PURE__*/React.createElement(Sec, {
-    icon: "\uD83D\uDC93",
-    title: "Ritmo ECG"
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: 'flex',
-      flexWrap: 'wrap',
-      gap: 6,
-      paddingTop: 8
-    }
-  }, Object.entries(RHYTHM_INFO).map(([id, info]) => {
-    const sel = rhythm === id;
-    const bg = sel ? id === 'sinusal' ? '#1B2A3B' : id === 'marcap' ? '#9B59B6' : ['vfib', 'asistolia'].includes(id) ? '#E63946' : '#F5A623' : 'white';
-    return /*#__PURE__*/React.createElement("button", {
-      key: id,
-      onClick: () => setRhythm(id),
-      style: {
-        padding: '6px 12px',
-        fontSize: 11,
-        fontWeight: 500,
-        borderRadius: 100,
-        cursor: 'pointer',
-        border: sel ? 'none' : '1px solid #E2E8F0',
-        background: bg,
-        color: sel ? 'white' : '#5A6B7E'
-      }
-    }, info.label);
-  }))), /*#__PURE__*/React.createElement(Sec, {
-    icon: "\u26A1",
-    title: "Programas cl\xEDnicos"
-  }, /*#__PURE__*/React.createElement("div", {
-    style: {
-      display: 'flex',
-      flexWrap: 'wrap',
-      gap: 6,
-      paddingTop: 8
-    }
-  }, PROGRAMS.map(p => /*#__PURE__*/React.createElement("button", {
-    key: p.id,
-    onClick: () => applyProg(p),
-    style: {
-      padding: '6px 12px',
-      fontSize: 11,
-      fontWeight: 500,
-      borderRadius: 100,
-      cursor: 'pointer',
-      border: prog === p.id ? 'none' : '1px solid #E2E8F0',
-      background: prog === p.id ? p.color : 'white',
-      color: prog === p.id ? 'white' : '#5A6B7E'
-    }
-  }, p.label))))));
+  }, "\u21BA Reset ST"))))));
 }
 
 // ══════════════════════════════════════════════════════
@@ -2792,9 +2966,10 @@ function VerifScreen({
     }
   }, "Sin mediciones para ", param.toUpperCase(), "."));
 }
-function CalScreen({
+function AjustesScreen({
   cal,
-  setCal
+  setCal,
+  connMode
 }) {
   const [param, setParam] = useState('nibp');
   const [entry, setEntry] = useState({
@@ -2896,6 +3071,38 @@ function CalScreen({
       marginBottom: 14,
       padding: '12px 14px',
       borderRadius: 8,
+      border: '1px solid #E2E8F0',
+      background: 'white',
+      display: 'flex',
+      alignItems: 'center',
+      gap: 10
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: connMode !== 'demo' ? '#00C896' : '#94A3B8',
+      display: 'flex'
+    }
+  }, connMode === 'ble' ? /*#__PURE__*/React.createElement(IconBluetooth, {
+    size: 20
+  }) : /*#__PURE__*/React.createElement(IconWifi, {
+    size: 20
+  })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontWeight: 600,
+      fontSize: 13,
+      color: connMode !== 'demo' ? '#00C896' : '#5A6B7E'
+    }
+  }, connMode === 'wifi' ? 'Conectado por WiFi' : connMode === 'ble' ? 'Conectado por Bluetooth' : 'Sin conexión — modo demo'), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 11,
+      color: '#94A3B8',
+      marginTop: 2
+    }
+  }, "M\xF3dulo SEM"))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginBottom: 14,
+      padding: '12px 14px',
+      borderRadius: 8,
       border: `1px solid ${calCount === 4 ? 'rgba(0,200,150,0.3)' : calCount > 0 ? 'rgba(245,166,35,0.3)' : 'rgba(100,100,100,0.2)'}`,
       background: calCount === 4 ? 'rgba(0,200,150,0.06)' : calCount > 0 ? 'rgba(245,166,35,0.06)' : 'rgba(0,0,0,0.02)',
       display: 'flex',
@@ -2941,7 +3148,7 @@ function CalScreen({
       borderRadius: 8,
       cursor: 'pointer',
       border: param === id ? 'none' : '1px solid #E2E8F0',
-      background: param === id ? '#1B2A3B' : 'white',
+      background: param === id ? '#22344C' : 'white',
       color: param === id ? '#00C896' : '#5A6B7E',
       display: 'flex',
       alignItems: 'center',
@@ -3052,7 +3259,7 @@ function CalScreen({
     onClick: addPoint,
     style: {
       padding: '7px 14px',
-      background: '#1B2A3B',
+      background: '#22344C',
       color: '#00C896',
       border: '1px solid #00C89640',
       borderRadius: 6,
@@ -3311,7 +3518,7 @@ function CalScreen({
     style: {
       width: '100%',
       padding: '12px',
-      background: '#1B2A3B',
+      background: '#22344C',
       color: 'white',
       border: 'none',
       borderRadius: 8,
@@ -3380,7 +3587,7 @@ function InformeScreen({
     style: {
       width: '100%',
       padding: '12px',
-      background: '#1B2A3B',
+      background: '#22344C',
       color: 'white',
       border: 'none',
       borderRadius: 8,
@@ -3424,7 +3631,7 @@ function InformeScreen({
       fontSize: 12,
       color: '#5A6B7E'
     }
-  }, "SEM Simulator v3.3")), /*#__PURE__*/React.createElement("div", {
+  }, "SEM Simulator v3.4")), /*#__PURE__*/React.createElement("div", {
     style: {
       textAlign: 'right'
     }
@@ -3482,7 +3689,7 @@ function InformeScreen({
       lineHeight: 1.6,
       marginBottom: 24
     }
-  }, "Verificaci\xF3n realizada con SEM Simulator v3.3 calibrado. Criterios: NIBP \u2192 AAMI SP10/ISO 81060-2 \xB7 SpO\u2082 \u2192 ISO 9919 \xB7 Temperatura \u2192 IEC 60601-2-56."), /*#__PURE__*/React.createElement("div", {
+  }, "Verificaci\xF3n realizada con SEM Simulator v3.4 calibrado. Criterios: NIBP \u2192 AAMI SP10/ISO 81060-2 \xB7 SpO\u2082 \u2192 ISO 9919 \xB7 Temperatura \u2192 IEC 60601-2-56."), /*#__PURE__*/React.createElement("div", {
     style: {
       display: 'grid',
       gridTemplateColumns: '1fr 1fr',
@@ -3680,8 +3887,8 @@ function App() {
     home: 'SEM Simulator',
     monitor: 'Monitor Multiparamétrico',
     spo2: 'Saturometría SpO₂',
-    ecg: 'ECG / Calibración',
-    cal: 'Calibración',
+    ecg: 'ECG',
+    ajustes: 'Ajustes',
     verif: 'Verificación',
     informe: 'Informe'
   };
@@ -3694,12 +3901,12 @@ function App() {
       display: 'flex',
       flexDirection: 'column',
       height: '100vh',
-      background: '#07090F'
+      background: '#0E1826'
     }
   }, /*#__PURE__*/React.createElement("div", {
     id: "app-header",
     style: {
-      background: '#0B1520',
+      background: '#152238',
       padding: '0 16px',
       height: 52,
       display: 'flex',
@@ -3773,15 +3980,11 @@ function App() {
   }, screen === 'home' && /*#__PURE__*/React.createElement(HomeScreen, {
     cv: cv,
     rhythm: rhythm,
-    running: running,
-    ecgMode: ecgMode,
     amplitude: corrAmp,
-    stOffset: stOffset,
     cal: cal,
     anyCal: anyCal,
     setScreen: setScreen,
-    sensorData: sensorData,
-    tempIsReal: realTemp
+    sensorData: sensorData
   }), screen === 'monitor' && /*#__PURE__*/React.createElement(MonitorScreen, {
     vitals: vitals,
     setV: setV,
@@ -3796,8 +3999,6 @@ function App() {
     prog: prog,
     setProg: setProg,
     applyProg: applyProg,
-    setScreen: setScreen,
-    connMode: connMode,
     tempIsReal: realTemp
   }), screen === 'spo2' && /*#__PURE__*/React.createElement(Spo2Screen, {
     vitals: vitals,
@@ -3811,7 +4012,10 @@ function App() {
     stOffset: stOffset,
     cal: cal,
     brand: spo2Brand,
-    setBrand: setSpo2Brand
+    setBrand: setSpo2Brand,
+    prog: prog,
+    setProg: setProg,
+    applyProg: applyProg
   }), screen === 'ecg' && /*#__PURE__*/React.createElement(EcgScreen, {
     vitals: vitals,
     setV: setV,
@@ -3829,9 +4033,10 @@ function App() {
     prog: prog,
     setProg: setProg,
     applyProg: applyProg
-  }), screen === 'cal' && /*#__PURE__*/React.createElement(CalScreen, {
+  }), screen === 'ajustes' && /*#__PURE__*/React.createElement(AjustesScreen, {
     cal: cal,
-    setCal: setCal
+    setCal: setCal,
+    connMode: connMode
   }), screen === 'verif' && /*#__PURE__*/React.createElement(VerifScreen, {
     vitals: {
       hr: cv.hr,

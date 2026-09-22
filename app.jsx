@@ -48,6 +48,27 @@ const defaultCalP={offset:0,gain:1,applied:false,points:[],instrument:{...defaul
 const defaultCal={nibp:{...defaultCalP},temp:{...defaultCalP},ecg:{...defaultCalP},spo2:{...defaultCalP}};
 
 // ══════════════════════════════════════════════════════
+// ICONOS (SVG en línea — sin fuentes de emoji ni CDN externo,
+// para no reintroducir dependencias que rompan el uso offline)
+// ══════════════════════════════════════════════════════
+const Icon=({d,size=20,color='currentColor',children})=>(
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    {children||<path d={d}/>}
+  </svg>
+);
+const IconMonitor=p=><Icon {...p}><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></Icon>;
+const IconActivity=p=><Icon {...p} d="M22 12h-4l-3 9L9 3l-3 9H2"/>;
+const IconDroplet=p=><Icon {...p} d="M12 2.69s6 7.15 6 11a6 6 0 0 1-12 0c0-3.85 6-11 6-11z"/>;
+const IconSettings=p=><Icon {...p}><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></Icon>;
+const IconClipboard=p=><Icon {...p}><path d="M9 2h6a1 1 0 0 1 1 1v2H8V3a1 1 0 0 1 1-1z"/><rect x="5" y="4" width="14" height="18" rx="2"/><line x1="9" y1="11" x2="15" y2="11"/><line x1="9" y1="15" x2="15" y2="15"/></Icon>;
+const IconFileText=p=><Icon {...p}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/></Icon>;
+const IconZap=p=><Icon {...p} d="M13 2L4.09 12.11a1 1 0 0 0 .76 1.65h5.4l-1.1 8.24 8.91-10.11a1 1 0 0 0-.76-1.65h-5.4z"/>;
+const IconSliders=p=><Icon {...p}><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></Icon>;
+const IconWifi=p=><Icon {...p}><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></Icon>;
+const IconBluetooth=p=><Icon {...p} d="M6.5 6.5l11 11L12 23V1l5.5 5.5-11 11"/>;
+const IconChevron=p=><Icon {...p} d="M6 9l6 6 6-6"/>;
+
+// ══════════════════════════════════════════════════════
 // ECG MATH
 // ══════════════════════════════════════════════════════
 function gauss(x,c,w,a){return a*Math.exp(-Math.pow((x-c)/w,2));}
@@ -92,7 +113,7 @@ function drawWave(canvas,buf,color,label,yMin,yMax){
   const ctx=canvas.getContext('2d');
   const W=canvas.width,H=canvas.height,pL=4,pR=4,pT=4,pB=12;
   const pH=H-pT-pB,pW=W-pL-pR;
-  ctx.fillStyle='#07090F';ctx.fillRect(0,0,W,H);
+  ctx.fillStyle='#0E1826';ctx.fillRect(0,0,W,H);
   ctx.strokeStyle='rgba(255,255,255,0.04)';ctx.lineWidth=1;
   for(let i=1;i<4;i++){const y=pT+(i/4)*pH;ctx.beginPath();ctx.moveTo(pL,y);ctx.lineTo(W-pR,y);ctx.stroke();}
   for(let i=1;i<8;i++){const x=pL+(i/8)*pW;ctx.beginPath();ctx.moveTo(x,pT);ctx.lineTo(x,pT+pH);ctx.stroke();}
@@ -158,7 +179,7 @@ function Sec({icon,title,color,defaultOpen,children}){
           {icon&&<span style={{fontSize:18}}>{icon}</span>}
           <span style={{fontWeight:600,fontSize:14,color:color||'#1A2535'}}>{title}</span>
         </div>
-        <span style={{color:'#aaa',fontSize:12,transform:open?'rotate(180deg)':'none',transition:'transform 0.2s',flexShrink:0}}>▼</span>
+        <span style={{color:'#94A3B8',transform:open?'rotate(180deg)':'none',transition:'transform 0.2s',flexShrink:0,display:'flex'}}><IconChevron size={16}/></span>
       </button>
       {open&&<div style={{padding:'4px 16px 16px',animation:'fadeIn 0.15s ease'}}>{children}</div>}
     </div>
@@ -221,7 +242,7 @@ function MonitorDisplay({cv,rhythm,running,ecgMode,amplitude,stOffset,cal,compac
   const tmpC=cv.temp>=38.5?'#E63946':cv.temp>=37.5?'#F5A623':cv.temp<35.5?'#3A86FF':'#00C896';
   const map=Math.round(cv.dia+(cv.sys-cv.dia)/3);
   return(
-    <div style={{background:'#07090F',padding:'10px 12px',display:'flex',flexDirection:'column',gap:8}}>
+    <div style={{background:'#0E1826',padding:'10px 12px',display:'flex',flexDirection:'column',gap:8}}>
       {/* Rhythm badge */}
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
         <span style={{fontFamily:'Space Mono,monospace',fontSize:8,color:'rgba(0,200,150,0.35)',letterSpacing:'0.12em',textTransform:'uppercase'}}>
@@ -357,7 +378,7 @@ function ConnectScreen({onConnect,onDemo}){
   };
 
   return(
-    <div style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',height:'100vh',background:'#07090F',padding:24,gap:20}}>
+    <div style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',height:'100vh',background:'#0E1826',padding:24,gap:20}}>
       {/* Logo */}
       <div style={{textAlign:'center',marginBottom:8}}>
         <div style={{fontFamily:'Space Mono,monospace',fontSize:28,fontWeight:700,color:'#00C896',letterSpacing:'0.1em'}}>◉ SEM</div>
@@ -366,7 +387,7 @@ function ConnectScreen({onConnect,onDemo}){
       </div>
 
       {/* Mini ECG visual */}
-      <div style={{width:'100%',maxWidth:300,height:60,background:'#0B1520',borderRadius:8,display:'flex',alignItems:'center',justifyContent:'center',border:'1px solid rgba(0,200,150,0.2)'}}>
+      <div style={{width:'100%',maxWidth:300,height:60,background:'#152238',borderRadius:8,display:'flex',alignItems:'center',justifyContent:'center',border:'1px solid rgba(0,200,150,0.2)'}}>
         <svg viewBox="0 0 300 60" style={{width:'100%',height:'100%'}}>
           <polyline points="0,30 40,30 55,30 62,10 70,50 78,5 86,55 94,28 120,28 140,28 147,10 155,50 163,5 171,55 179,28 210,28 300,28"
             fill="none" stroke="#00C896" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
@@ -385,7 +406,7 @@ function ConnectScreen({onConnect,onDemo}){
             <input value={ip} onChange={e=>setIp(e.target.value)}
               style={{flex:1,padding:'8px 12px',borderRadius:6,border:'1px solid rgba(0,200,150,0.3)',background:'rgba(0,0,0,0.4)',color:'rgba(0,200,150,0.4)',fontFamily:'Space Mono,monospace',fontSize:11,outline:'none'}}/>
             <button onClick={connectWifi} disabled={connecting}
-              style={{padding:'8px 18px',background:'#00C896',color:'#07090F',border:'none',borderRadius:6,fontSize:13,fontWeight:700,cursor:'pointer',flexShrink:0}}>
+              style={{padding:'8px 18px',background:'#00C896',color:'#0E1826',border:'none',borderRadius:6,fontSize:13,fontWeight:700,cursor:'pointer',flexShrink:0}}>
               Conectar
             </button>
           </div>
@@ -412,7 +433,7 @@ function ConnectScreen({onConnect,onDemo}){
         Modo demo (sin hardware)
       </button>
 
-      <div style={{fontFamily:'Space Mono,monospace',fontSize:9,color:'rgba(255,255,255,0.15)',textAlign:'center',marginTop:8}}>v3.3</div>
+      <div style={{fontFamily:'Space Mono,monospace',fontSize:9,color:'rgba(255,255,255,0.15)',textAlign:'center',marginTop:8}}>v3.4</div>
     </div>
   );
 }
@@ -423,9 +444,9 @@ function ConnectScreen({onConnect,onDemo}){
 // ══════════════════════════════════════════════════════
 function HomeCard({icon,title,value,sub,color,onClick,badge}){
   return(
-    <button onClick={onClick} style={{background:'#0E1A2B',border:`1px solid ${color}25`,borderRadius:12,padding:'16px 14px',textAlign:'left',cursor:'pointer',display:'flex',flexDirection:'column',gap:6,width:'100%',transition:'border-color 0.15s',WebkitTapHighlightColor:'transparent'}}>
+    <button onClick={onClick} style={{background:'#1A2A42',border:`1px solid ${color}25`,borderRadius:12,padding:'16px 14px',textAlign:'left',cursor:'pointer',display:'flex',flexDirection:'column',gap:6,width:'100%',transition:'border-color 0.15s',WebkitTapHighlightColor:'transparent'}}>
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start'}}>
-        <span style={{fontSize:22}}>{icon}</span>
+        <span style={{display:'flex',color}}>{icon}</span>
         {badge&&<span style={{fontFamily:'Space Mono,monospace',fontSize:8,padding:'2px 6px',borderRadius:3,background:`${color}22`,color:color}}>{badge}</span>}
       </div>
       <div>
@@ -437,38 +458,49 @@ function HomeCard({icon,title,value,sub,color,onClick,badge}){
   );
 }
 
-function HomeScreen({cv,rhythm,running,ecgMode,amplitude,stOffset,cal,anyCal,setScreen,sensorData,tempIsReal}){
+// Home: solo tarjetas de navegación — sin vista previa en vivo, para que
+// entrar a la app sea elegir a dónde ir, no ver el monitor ya corriendo.
+function HomeScreen({cv,rhythm,amplitude,cal,anyCal,setScreen,sensorData}){
   const dead=rhythm==='vfib'||rhythm==='asistolia';
   const calCount=['nibp','temp','ecg','spo2'].filter(k=>cal[k].applied).length;
   return(
-    <div className="screen" style={{display:'flex',flexDirection:'column',height:'100%',overflow:'hidden'}}>
-      {/* Mini monitor strip */}
-      <div style={{flexShrink:0}}>
-        <MonitorDisplay cv={cv} rhythm={rhythm} running={running} ecgMode={ecgMode} amplitude={amplitude} stOffset={stOffset} cal={cal} compact={true} tempIsReal={tempIsReal}/>
+    <div className="screen" style={{height:'100%',overflow:'auto',padding:16,background:'#152238'}}>
+      <div style={{marginBottom:14}}>
+        <div style={{fontFamily:'Space Mono,monospace',fontSize:10,color:'rgba(255,255,255,0.35)',letterSpacing:'0.1em',textTransform:'uppercase'}}>Elegí una pantalla</div>
       </div>
-      {/* Cards grid */}
-      <div style={{flex:1,overflow:'auto',padding:14,background:'#0B1520'}}>
-        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:10}}>
-          <HomeCard icon="🖥️" title="Monitor" value={dead?'---':`${cv.sys}/${cv.dia}`}
-            sub={`FC ${cv.hr} · SpO₂ ${cv.spo2}% · ${Number(cv.temp).toFixed(1)}°C${sensorData&&sensorData.tempRef>0?' 🌡️ real':''}`}
-            color="#00C896" onClick={()=>setScreen('monitor')}/>
-          <HomeCard icon="💧" title="Saturometría" value={dead?'---':`${cv.spo2}%`}
-            sub={`FC ${cv.hr} bpm · ${RHYTHM_INFO[rhythm]?.label||rhythm}`}
-            color="#00BFFF" onClick={()=>setScreen('spo2')}/>
-          <HomeCard icon="❤️" title="ECG" value={dead?'---':`${amplitude.toFixed(1)} mV`}
-            sub={ecgMode==='cardiaco'?`${RHYTHM_INFO[rhythm]?.label||rhythm}`:`Cal: ${ecgMode}`}
-            color="#00C896" onClick={()=>setScreen('ecg')}/>
-          <HomeCard icon="🔧" title="Calibración" value={`${calCount}/4`}
-            sub={calCount===4?'Todos calibrados':calCount===0?'Sin calibrar':'Calibración parcial'}
-            color="#F5A623" onClick={()=>setScreen('cal')} badge={anyCal?'ACTIVO':null}/>
-        </div>
-        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
-          <HomeCard icon="📋" title="Verificación" value="Medir"
-            sub="Registrar lecturas del equipo" color="#9B59B6" onClick={()=>setScreen('verif')}/>
-          <HomeCard icon="📄" title="Informe" value="Generar"
-            sub="Certificado de servicio" color="#6C8EBF" onClick={()=>setScreen('informe')}/>
-        </div>
+      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:10}}>
+        <HomeCard icon={<IconMonitor size={22}/>} title="Monitor" value={dead?'---':`${cv.sys}/${cv.dia}`}
+          sub={`FC ${cv.hr} · SpO₂ ${cv.spo2}% · ${Number(cv.temp).toFixed(1)}°C${sensorData&&sensorData.tempRef>0?' · real':''}`}
+          color="#00C896" onClick={()=>setScreen('monitor')}/>
+        <HomeCard icon={<IconActivity size={22}/>} title="ECG" value={dead?'---':`${amplitude.toFixed(1)} mV`}
+          sub={RHYTHM_INFO[rhythm]?.label||rhythm}
+          color="#00C896" onClick={()=>setScreen('ecg')}/>
+        <HomeCard icon={<IconDroplet size={22}/>} title="Saturometría" value={dead?'---':`${cv.spo2}%`}
+          sub={`FC ${cv.hr} bpm`}
+          color="#00BFFF" onClick={()=>setScreen('spo2')}/>
+        <HomeCard icon={<IconSettings size={22}/>} title="Ajustes" value={`${calCount}/4`}
+          sub={calCount===4?'Todos calibrados':calCount===0?'Calibración y conexión':'Calibración parcial'}
+          color="#F5A623" onClick={()=>setScreen('ajustes')} badge={anyCal?'ACTIVO':null}/>
       </div>
+      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
+        <HomeCard icon={<IconClipboard size={22}/>} title="Verificación" value="Medir"
+          sub="Registrar lecturas del equipo" color="#9B59B6" onClick={()=>setScreen('verif')}/>
+        <HomeCard icon={<IconFileText size={22}/>} title="Informe" value="Generar"
+          sub="Certificado de servicio" color="#6C8EBF" onClick={()=>setScreen('informe')}/>
+      </div>
+    </div>
+  );
+}
+
+// Fila de chips reutilizable (programas, ritmos, etc.)
+function ChipRow({items,selectedId,onSelect,getBg}){
+  return(
+    <div style={{display:'flex',flexWrap:'wrap',gap:6}}>
+      {items.map(it=>{
+        const sel=selectedId===it.id;
+        const bg=sel?(getBg?getBg(it):it.color):'white';
+        return<button key={it.id} onClick={()=>onSelect(it)} style={{padding:'6px 12px',fontSize:12,fontWeight:500,borderRadius:100,cursor:'pointer',border:sel?'none':'1px solid #E2E8F0',background:bg,color:sel?'white':'#5A6B7E'}}>{it.label}</button>;
+      })}
     </div>
   );
 }
@@ -476,28 +508,27 @@ function HomeScreen({cv,rhythm,running,ecgMode,amplitude,stOffset,cal,anyCal,set
 // ══════════════════════════════════════════════════════
 // MONITOR SCREEN
 // ══════════════════════════════════════════════════════
-function MonitorScreen({vitals,setV,cv,rhythm,setRhythm,running,ecgMode,amplitude,stOffset,cal,prog,setProg,applyProg,setScreen,connMode,tempIsReal}){
-  const dead=rhythm==='vfib'||rhythm==='asistolia';
+function MonitorScreen({vitals,setV,cv,rhythm,setRhythm,running,ecgMode,amplitude,stOffset,cal,prog,setProg,applyProg,tempIsReal}){
+  const rhythmItems=Object.entries(RHYTHM_INFO).map(([id,info])=>({id,label:info.label,color:id==='sinusal'?'#22344C':id==='marcap'?'#9B59B6':['vfib','asistolia'].includes(id)?'#E63946':'#F5A623'}));
   return(
     <div className="screen" style={{display:'flex',flexDirection:'column',height:'100%',overflow:'hidden'}}>
       <div style={{flexShrink:0}}>
         <MonitorDisplay cv={cv} rhythm={rhythm} running={running} ecgMode={ecgMode} amplitude={amplitude} stOffset={stOffset} cal={cal} tempIsReal={tempIsReal}/>
       </div>
       <div style={{flex:1,overflow:'auto',background:'#F2F4F7'}}>
-        <Sec icon="⚡" title="Programas clínicos" defaultOpen={true} color="#1A2535">
-          <div style={{display:'flex',flexWrap:'wrap',gap:6,paddingTop:4}}>
-            {PROGRAMS.map(p=>(<button key={p.id} onClick={()=>applyProg(p)} style={{padding:'6px 12px',fontSize:12,fontWeight:500,borderRadius:100,cursor:'pointer',border:prog===p.id?'none':'1px solid #E2E8F0',background:prog===p.id?p.color:'white',color:prog===p.id?'white':'#5A6B7E'}}>{p.label}</button>))}
+        <Sec icon={<IconZap size={18} color="#5A6B7E"/>} title="Tipos / Accesos rápidos" defaultOpen={true} color="#1A2535">
+          <div style={{paddingTop:4,display:'flex',flexDirection:'column',gap:10}}>
+            <div>
+              <div style={{fontSize:10,color:'#94A3B8',fontWeight:600,textTransform:'uppercase',marginBottom:5}}>Programas clínicos</div>
+              <ChipRow items={PROGRAMS} selectedId={prog} onSelect={applyProg}/>
+            </div>
+            <div>
+              <div style={{fontSize:10,color:'#94A3B8',fontWeight:600,textTransform:'uppercase',marginBottom:5}}>Ritmo ECG</div>
+              <ChipRow items={rhythmItems} selectedId={rhythm} onSelect={it=>{setRhythm(it.id);setProg(null);}}/>
+            </div>
           </div>
         </Sec>
-        <Sec icon="💓" title="Ritmo ECG">
-          <div style={{display:'flex',flexWrap:'wrap',gap:6,paddingTop:4}}>
-            {Object.entries(RHYTHM_INFO).map(([id,info])=>{
-              const sel=rhythm===id;const bg=sel?(id==='sinusal'?'#1B2A3B':id==='marcap'?'#9B59B6':['vfib','asistolia'].includes(id)?'#E63946':'#F5A623'):'white';
-              return<button key={id} onClick={()=>{setRhythm(id);setProg(null);}} style={{padding:'6px 12px',fontSize:12,fontWeight:500,borderRadius:100,cursor:'pointer',border:sel?'none':'1px solid #E2E8F0',background:bg,color:sel?'white':'#5A6B7E'}}>{info.label}</button>;
-            })}
-          </div>
-        </Sec>
-        <Sec icon="🎛️" title="Parámetros">
+        <Sec icon={<IconSliders size={18} color="#5A6B7E"/>} title="Parámetros">
           <div style={{paddingTop:8}}>
             <SliderRow label="FC"   value={vitals.hr}   min={20}  max={200} step={1}   unit="bpm"  onChange={v=>setV('hr',v)}/>
             <SliderRow label="SpO₂" value={vitals.spo2} min={50}  max={100} step={1}   unit="%"    onChange={v=>setV('spo2',v)}/>
@@ -505,16 +536,6 @@ function MonitorScreen({vitals,setV,cv,rhythm,setRhythm,running,ecgMode,amplitud
             <SliderRow label="DIA"  value={vitals.dia}  min={30}  max={160} step={1}   unit="mmHg" onChange={v=>setV('dia',v)}/>
             <SliderRow label="TEMP" value={vitals.temp} min={32}  max={42}  step={0.1} unit="°C"   onChange={v=>setV('temp',v)}/>
             <SliderRow label="RESP" value={vitals.resp} min={4}   max={60}  step={1}   unit="rpm"  onChange={v=>setV('resp',v)}/>
-          </div>
-        </Sec>
-        <Sec icon="📡" title="Módulo SEM">
-          <div style={{paddingTop:8,display:'flex',alignItems:'center',gap:10}}>
-            <div style={{width:8,height:8,borderRadius:'50%',flexShrink:0,
-              background:connMode!=='demo'?'#00C896':'#555',
-              boxShadow:connMode!=='demo'?'0 0 6px #00C896':'none'}}/>
-            <span style={{fontSize:12,color:connMode!=='demo'?'#00C896':'#aaa'}}>
-              {connMode==='wifi'?'Conectado por WiFi':connMode==='ble'?'Conectado por Bluetooth':'Sin conexión — modo demo'}
-            </span>
           </div>
         </Sec>
       </div>
@@ -525,14 +546,14 @@ function MonitorScreen({vitals,setV,cv,rhythm,setRhythm,running,ecgMode,amplitud
 // ══════════════════════════════════════════════════════
 // SPO2 SCREEN
 // ══════════════════════════════════════════════════════
-function Spo2Screen({vitals,setV,cv,rhythm,setRhythm,running,ecgMode,amplitude,stOffset,cal,brand,setBrand}){
+function Spo2Screen({vitals,setV,cv,rhythm,setRhythm,running,ecgMode,amplitude,stOffset,cal,brand,setBrand,prog,setProg,applyProg}){
   const dead=rhythm==='vfib'||rhythm==='asistolia';
   const spC=cv.spo2<90?'#E63946':cv.spo2<95?'#F5A623':'#00BFFF';
   const b=SPO2_BRANDS[brand];
   return(
     <div className="screen" style={{display:'flex',flexDirection:'column',height:'100%',overflow:'hidden'}}>
       {/* SpO2 focused monitor */}
-      <div style={{background:'#07090F',padding:'12px',flexShrink:0}}>
+      <div style={{background:'#0E1826',padding:'12px',flexShrink:0}}>
         <div style={{fontFamily:'Space Mono,monospace',fontSize:8,color:'rgba(0,191,255,0.4)',letterSpacing:'0.1em',marginBottom:6}}>PLETH — SpO₂</div>
         <WaveCanvas vitals={cv} rhythm={rhythm} running={running} type="pleth" ecgMode={ecgMode} amplitude={amplitude} stOffset={stOffset} h={90}/>
         <div style={{display:'grid',gridTemplateColumns:'2fr 1fr 1fr',gap:8,marginTop:10}}>
@@ -549,32 +570,37 @@ function Spo2Screen({vitals,setV,cv,rhythm,setRhythm,running,ecgMode,amplitude,s
       </div>
       {/* Controls */}
       <div style={{flex:1,overflow:'auto',background:'#F2F4F7'}}>
-        <Sec icon="📱" title="Marca / Protocolo" defaultOpen={true}>
-          <div style={{display:'flex',gap:6,marginBottom:12,paddingTop:8}}>
-            {Object.entries(SPO2_BRANDS).map(([id,bb])=>(
-              <button key={id} onClick={()=>setBrand(id)} style={{flex:1,padding:'8px 6px',fontSize:11,fontWeight:600,borderRadius:8,cursor:'pointer',border:brand===id?'none':'1px solid #E2E8F0',background:brand===id?bb.color:'white',color:brand===id?'white':'#5A6B7E'}}>{bb.label}</button>
-            ))}
-          </div>
-          <div style={{background:'#F8F9FB',borderRadius:8,padding:12,fontSize:12,lineHeight:1.8}}>
-            <div><b>Conector:</b> {b.connector||'—'}</div>
-            <div><b>Detección:</b> {b.detect}</div>
-            <div><b>Algoritmo:</b> {b.notes}</div>
-            <div style={{marginTop:8,padding:'6px 10px',borderRadius:5,background:b.color+'15',border:`1px solid ${b.color}33`,color:b.color,fontSize:11,fontFamily:'Space Mono,monospace'}}>🔧 HW: {b.hw}</div>
+        <Sec icon={<IconZap size={18} color="#5A6B7E"/>} title="Tipos / Accesos rápidos" defaultOpen={true}>
+          <div style={{paddingTop:4,display:'flex',flexDirection:'column',gap:10}}>
+            <div>
+              <div style={{fontSize:10,color:'#94A3B8',fontWeight:600,textTransform:'uppercase',marginBottom:5}}>Programas clínicos</div>
+              <ChipRow items={PROGRAMS} selectedId={prog} onSelect={applyProg}/>
+            </div>
+            <div>
+              <div style={{fontSize:10,color:'#94A3B8',fontWeight:600,textTransform:'uppercase',marginBottom:5}}>Ritmo cardíaco</div>
+              <ChipRow items={Object.entries(RHYTHM_INFO).map(([id,info])=>({id,label:info.label,color:id==='sinusal'?'#22344C':id==='marcap'?'#9B59B6':['vfib','asistolia'].includes(id)?'#E63946':'#F5A623'}))} selectedId={rhythm} onSelect={it=>{setRhythm(it.id);setProg(null);}}/>
+            </div>
+            <div>
+              <div style={{fontSize:10,color:'#94A3B8',fontWeight:600,textTransform:'uppercase',marginBottom:5}}>Marca / Protocolo de sonda</div>
+              <div style={{display:'flex',gap:6,marginBottom:10}}>
+                {Object.entries(SPO2_BRANDS).map(([id,bb])=>(
+                  <button key={id} onClick={()=>setBrand(id)} style={{flex:1,padding:'8px 6px',fontSize:11,fontWeight:600,borderRadius:8,cursor:'pointer',border:brand===id?'none':'1px solid #E2E8F0',background:brand===id?bb.color:'white',color:brand===id?'white':'#5A6B7E'}}>{bb.label}</button>
+                ))}
+              </div>
+              <div style={{background:'#F8F9FB',borderRadius:8,padding:12,fontSize:12,lineHeight:1.8}}>
+                <div><b>Conector:</b> {b.connector||'—'}</div>
+                <div><b>Detección:</b> {b.detect}</div>
+                <div><b>Algoritmo:</b> {b.notes}</div>
+                <div style={{marginTop:8,padding:'6px 10px',borderRadius:5,background:b.color+'15',border:`1px solid ${b.color}33`,color:b.color,fontSize:11,fontFamily:'Space Mono,monospace'}}>HW: {b.hw}</div>
+              </div>
+            </div>
           </div>
         </Sec>
-        <Sec icon="🎛️" title="Parámetros SpO₂ / FC">
+        <Sec icon={<IconSliders size={18} color="#5A6B7E"/>} title="Parámetros">
           <div style={{paddingTop:8}}>
             <SliderRow label="SpO₂" value={vitals.spo2} min={50} max={100} step={1} unit="%" onChange={v=>setV('spo2',v)}/>
             <SliderRow label="FC"   value={vitals.hr}   min={20} max={200} step={1} unit="bpm" onChange={v=>setV('hr',v)}/>
             <SliderRow label="RESP" value={vitals.resp} min={4}  max={60}  step={1} unit="rpm" onChange={v=>setV('resp',v)}/>
-          </div>
-        </Sec>
-        <Sec icon="💓" title="Ritmo cardíaco">
-          <div style={{display:'flex',flexWrap:'wrap',gap:6,paddingTop:8}}>
-            {Object.entries(RHYTHM_INFO).map(([id,info])=>{
-              const sel=rhythm===id;const bg=sel?(id==='sinusal'?'#1B2A3B':id==='marcap'?'#9B59B6':['vfib','asistolia'].includes(id)?'#E63946':'#F5A623'):'white';
-              return<button key={id} onClick={()=>setRhythm(id)} style={{padding:'6px 12px',fontSize:11,fontWeight:500,borderRadius:100,cursor:'pointer',border:sel?'none':'1px solid #E2E8F0',background:bg,color:sel?'white':'#5A6B7E'}}>{info.label}</button>;
-            })}
           </div>
         </Sec>
       </div>
@@ -588,7 +614,7 @@ function Spo2Screen({vitals,setV,cv,rhythm,setRhythm,running,ecgMode,amplitude,s
 function EcgScreen({vitals,setV,cv,rhythm,setRhythm,running,ecgMode,setEcgMode,amplitude,setAmplitude,stOffset,setStOffset,cal,prog,setProg,applyProg}){
   return(
     <div className="screen" style={{display:'flex',flexDirection:'column',height:'100%',overflow:'hidden'}}>
-      <div style={{background:'#07090F',padding:'12px',flexShrink:0}}>
+      <div style={{background:'#0E1826',padding:'12px',flexShrink:0}}>
         <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:6}}>
           <span style={{fontFamily:'Space Mono,monospace',fontSize:8,color:'rgba(0,200,150,0.4)',letterSpacing:'0.1em',textTransform:'uppercase'}}>
             {ecgMode==='cardiaco'?'ECG Lead II':`Señal calibración — ${ecgMode}`}
@@ -613,49 +639,48 @@ function EcgScreen({vitals,setV,cv,rhythm,setRhythm,running,ecgMode,setEcgMode,a
         </div>
       </div>
       <div style={{flex:1,overflow:'auto',background:'#F2F4F7'}}>
-        <Sec icon="🔧" title="Señal de calibración" defaultOpen={true}>
-          <div style={{paddingTop:8}}>
-            <div style={{fontSize:11,color:'#5A6B7E',fontWeight:500,marginBottom:8}}>Tipo de señal</div>
-            <div style={{display:'flex',gap:6,flexWrap:'wrap',marginBottom:14}}>
-              {[['cardiaco','❤ Cardíaco','#00C896'],['cuadrada','⬜ Cuadrada','#F5A623'],['senoidal','〜 Senoidal','#3A86FF'],['triangular','△ Triangular','#9B59B6']].map(([id,lbl,col])=>(
-                <button key={id} onClick={()=>setEcgMode(id)} style={{padding:'7px 14px',fontSize:12,fontWeight:500,borderRadius:8,cursor:'pointer',border:ecgMode===id?'none':'1px solid #E2E8F0',background:ecgMode===id?col:'white',color:ecgMode===id?'white':'#5A6B7E'}}>{lbl}</button>
-              ))}
+        <Sec icon={<IconZap size={18} color="#5A6B7E"/>} title="Tipos / Accesos rápidos" defaultOpen={true}>
+          <div style={{paddingTop:4,display:'flex',flexDirection:'column',gap:10}}>
+            <div>
+              <div style={{fontSize:10,color:'#94A3B8',fontWeight:600,textTransform:'uppercase',marginBottom:5}}>Tipo de señal</div>
+              <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
+                {[['cardiaco','❤ Cardíaco','#00C896'],['cuadrada','⬜ Cuadrada','#F5A623'],['senoidal','〜 Senoidal','#3A86FF'],['triangular','△ Triangular','#9B59B6']].map(([id,lbl,col])=>(
+                  <button key={id} onClick={()=>setEcgMode(id)} style={{padding:'7px 14px',fontSize:12,fontWeight:500,borderRadius:8,cursor:'pointer',border:ecgMode===id?'none':'1px solid #E2E8F0',background:ecgMode===id?col:'white',color:ecgMode===id?'white':'#5A6B7E'}}>{lbl}</button>
+                ))}
+              </div>
             </div>
+            <div>
+              <div style={{fontSize:10,color:'#94A3B8',fontWeight:600,textTransform:'uppercase',marginBottom:5}}>Ritmo ECG</div>
+              <ChipRow items={Object.entries(RHYTHM_INFO).map(([id,info])=>({id,label:info.label,color:id==='sinusal'?'#22344C':id==='marcap'?'#9B59B6':['vfib','asistolia'].includes(id)?'#E63946':'#F5A623'}))} selectedId={rhythm} onSelect={it=>setRhythm(it.id)}/>
+            </div>
+            <div>
+              <div style={{fontSize:10,color:'#94A3B8',fontWeight:600,textTransform:'uppercase',marginBottom:5}}>Programas clínicos</div>
+              <ChipRow items={PROGRAMS} selectedId={prog} onSelect={applyProg}/>
+            </div>
+          </div>
+        </Sec>
+        <Sec icon={<IconSliders size={18} color="#5A6B7E"/>} title="Parámetros">
+          <div style={{paddingTop:8}}>
             <div style={{fontSize:11,color:'#5A6B7E',fontWeight:500,marginBottom:4}}>
               Amplitud: <b style={{color:'#1A2535'}}>{amplitude.toFixed(2)} mV</b>
               {cal.ecg.applied&&<span style={{fontSize:10,color:'#F5A623',marginLeft:6}}>→ {(amplitude*cal.ecg.gain).toFixed(2)} mV (cal)</span>}
             </div>
             <input type="range" min={0.1} max={2.0} step={0.05} value={amplitude} onChange={e=>setAmplitude(parseFloat(e.target.value))} style={{marginBottom:4}}/>
-            <div style={{display:'flex',justifyContent:'space-between',fontSize:10,color:'#aaa',marginBottom:14}}><span>0.1</span><span style={{color:'#00C896',fontWeight:600}}>1.0 mV estándar</span><span>2.0</span></div>
-          </div>
-        </Sec>
-        {ecgMode==='cardiaco'&&<Sec icon="📈" title="Segmento ST">
-          <div style={{paddingTop:8}}>
-            <div style={{fontSize:11,color:'#5A6B7E',fontWeight:500,marginBottom:4}}>
-              ST: <b style={{color:stOffset>0?'#F5A623':stOffset<0?'#3A86FF':'#00C896'}}>{stOffset>0?'+':''}{stOffset.toFixed(2)} mV</b>
-              {stOffset!==0&&<span style={{fontSize:10,color:stOffset>0?'#F5A623':'#3A86FF',marginLeft:6}}>{stOffset>0?'↑ elevación':'↓ depresión'}</span>}
-            </div>
-            <input type="range" min={-0.5} max={0.5} step={0.05} value={stOffset} onChange={e=>setStOffset(parseFloat(e.target.value))} style={{accentColor:stOffset>0?'#F5A623':stOffset<0?'#3A86FF':'#64748b',marginBottom:4}}/>
-            <div style={{display:'flex',justifyContent:'space-between',fontSize:10,color:'#aaa',marginBottom:10}}>
-              <span style={{color:'#3A86FF'}}>-0.5 depresión</span><span>0</span><span style={{color:'#F5A623'}}>+0.5 elevación</span>
-            </div>
-            {stOffset!==0&&<div style={{padding:'6px 10px',borderRadius:5,background:stOffset>0?'rgba(245,166,35,0.08)':'rgba(58,134,255,0.08)',border:`1px solid ${stOffset>0?'rgba(245,166,35,0.3)':'rgba(58,134,255,0.3)'}`,fontSize:11,color:stOffset>0?'#F5A623':'#3A86FF',marginBottom:8}}>
-              {stOffset>0?`ST +${stOffset.toFixed(2)} mV — posible isquemia / infarto`:`ST ${stOffset.toFixed(2)} mV — isquemia subendocárdica`}
-            </div>}
-            <button onClick={()=>setStOffset(0)} style={{padding:'5px 12px',fontSize:11,background:'none',border:'1px solid #E2E8F0',borderRadius:6,cursor:'pointer',color:'#5A6B7E'}}>↺ Reset ST</button>
-          </div>
-        </Sec>}
-        <Sec icon="💓" title="Ritmo ECG">
-          <div style={{display:'flex',flexWrap:'wrap',gap:6,paddingTop:8}}>
-            {Object.entries(RHYTHM_INFO).map(([id,info])=>{
-              const sel=rhythm===id;const bg=sel?(id==='sinusal'?'#1B2A3B':id==='marcap'?'#9B59B6':['vfib','asistolia'].includes(id)?'#E63946':'#F5A623'):'white';
-              return<button key={id} onClick={()=>setRhythm(id)} style={{padding:'6px 12px',fontSize:11,fontWeight:500,borderRadius:100,cursor:'pointer',border:sel?'none':'1px solid #E2E8F0',background:bg,color:sel?'white':'#5A6B7E'}}>{info.label}</button>;
-            })}
-          </div>
-        </Sec>
-        <Sec icon="⚡" title="Programas clínicos">
-          <div style={{display:'flex',flexWrap:'wrap',gap:6,paddingTop:8}}>
-            {PROGRAMS.map(p=>(<button key={p.id} onClick={()=>applyProg(p)} style={{padding:'6px 12px',fontSize:11,fontWeight:500,borderRadius:100,cursor:'pointer',border:prog===p.id?'none':'1px solid #E2E8F0',background:prog===p.id?p.color:'white',color:prog===p.id?'white':'#5A6B7E'}}>{p.label}</button>))}
+            <div style={{display:'flex',justifyContent:'space-between',fontSize:10,color:'#aaa',marginBottom:18}}><span>0.1</span><span style={{color:'#00C896',fontWeight:600}}>1.0 mV estándar</span><span>2.0</span></div>
+            {ecgMode==='cardiaco'&&<>
+              <div style={{fontSize:11,color:'#5A6B7E',fontWeight:500,marginBottom:4}}>
+                ST: <b style={{color:stOffset>0?'#F5A623':stOffset<0?'#3A86FF':'#00C896'}}>{stOffset>0?'+':''}{stOffset.toFixed(2)} mV</b>
+                {stOffset!==0&&<span style={{fontSize:10,color:stOffset>0?'#F5A623':'#3A86FF',marginLeft:6}}>{stOffset>0?'↑ elevación':'↓ depresión'}</span>}
+              </div>
+              <input type="range" min={-0.5} max={0.5} step={0.05} value={stOffset} onChange={e=>setStOffset(parseFloat(e.target.value))} style={{accentColor:stOffset>0?'#F5A623':stOffset<0?'#3A86FF':'#64748b',marginBottom:4}}/>
+              <div style={{display:'flex',justifyContent:'space-between',fontSize:10,color:'#aaa',marginBottom:10}}>
+                <span style={{color:'#3A86FF'}}>-0.5 depresión</span><span>0</span><span style={{color:'#F5A623'}}>+0.5 elevación</span>
+              </div>
+              {stOffset!==0&&<div style={{padding:'6px 10px',borderRadius:5,background:stOffset>0?'rgba(245,166,35,0.08)':'rgba(58,134,255,0.08)',border:`1px solid ${stOffset>0?'rgba(245,166,35,0.3)':'rgba(58,134,255,0.3)'}`,fontSize:11,color:stOffset>0?'#F5A623':'#3A86FF',marginBottom:8}}>
+                {stOffset>0?`ST +${stOffset.toFixed(2)} mV — posible isquemia / infarto`:`ST ${stOffset.toFixed(2)} mV — isquemia subendocárdica`}
+              </div>}
+              <button onClick={()=>setStOffset(0)} style={{padding:'5px 12px',fontSize:11,background:'none',border:'1px solid #E2E8F0',borderRadius:6,cursor:'pointer',color:'#5A6B7E'}}>↺ Reset ST</button>
+            </>}
           </div>
         </Sec>
       </div>
@@ -762,7 +787,7 @@ function VerifScreen({vitals, sensorData}){
   );
 }
 
-function CalScreen({cal,setCal}){
+function AjustesScreen({cal,setCal,connMode}){
   const [param,setParam]=useState('nibp');
   const [entry,setEntry]=useState({nominal:'',reference:''});
   const cfg=PARAM_CFG[param],p=cal[param];
@@ -776,6 +801,15 @@ function CalScreen({cal,setCal}){
   const calCount=['nibp','temp','ecg','spo2'].filter(k=>cal[k].applied).length;
   return(
     <div className="screen" style={{height:'100%',overflow:'auto',background:'#F2F4F7',padding:14}}>
+      <div style={{marginBottom:14,padding:'12px 14px',borderRadius:8,border:'1px solid #E2E8F0',background:'white',display:'flex',alignItems:'center',gap:10}}>
+        <span style={{color:connMode!=='demo'?'#00C896':'#94A3B8',display:'flex'}}>{connMode==='ble'?<IconBluetooth size={20}/>:<IconWifi size={20}/>}</span>
+        <div>
+          <div style={{fontWeight:600,fontSize:13,color:connMode!=='demo'?'#00C896':'#5A6B7E'}}>
+            {connMode==='wifi'?'Conectado por WiFi':connMode==='ble'?'Conectado por Bluetooth':'Sin conexión — modo demo'}
+          </div>
+          <div style={{fontSize:11,color:'#94A3B8',marginTop:2}}>Módulo SEM</div>
+        </div>
+      </div>
       <div style={{marginBottom:14,padding:'12px 14px',borderRadius:8,border:`1px solid ${calCount===4?'rgba(0,200,150,0.3)':calCount>0?'rgba(245,166,35,0.3)':'rgba(100,100,100,0.2)'}`,background:calCount===4?'rgba(0,200,150,0.06)':calCount>0?'rgba(245,166,35,0.06)':'rgba(0,0,0,0.02)',display:'flex',alignItems:'center',gap:10}}>
         <span style={{fontSize:20}}>{calCount===4?'✅':calCount>0?'⚠️':'⭕'}</span>
         <div>
@@ -787,7 +821,7 @@ function CalScreen({cal,setCal}){
       </div>
       <div style={{display:'flex',gap:6,marginBottom:14,flexWrap:'wrap'}}>
         {Object.entries(PARAM_CFG).map(([id,c])=>(
-          <button key={id} onClick={()=>setParam(id)} style={{padding:'7px 14px',fontSize:12,fontWeight:500,borderRadius:8,cursor:'pointer',border:param===id?'none':'1px solid #E2E8F0',background:param===id?'#1B2A3B':'white',color:param===id?'#00C896':'#5A6B7E',display:'flex',alignItems:'center',gap:5}}>
+          <button key={id} onClick={()=>setParam(id)} style={{padding:'7px 14px',fontSize:12,fontWeight:500,borderRadius:8,cursor:'pointer',border:param===id?'none':'1px solid #E2E8F0',background:param===id?'#22344C':'white',color:param===id?'#00C896':'#5A6B7E',display:'flex',alignItems:'center',gap:5}}>
             {c.label.split(' ')[0]}
             <span style={{fontSize:8,fontFamily:'Space Mono,monospace',padding:'1px 4px',borderRadius:3,background:cal[id].applied?'rgba(0,200,150,0.2)':'rgba(0,0,0,0.05)',color:cal[id].applied?'#00C896':'#aaa'}}>{cal[id].applied?'CAL':'—'}</span>
           </button>
@@ -805,7 +839,7 @@ function CalScreen({cal,setCal}){
         <div style={{display:'grid',gridTemplateColumns:'1fr 1fr auto',gap:8,alignItems:'end',marginBottom:14}}>
           <div><label style={LBL}>{cfg.nomLabel}</label><input type="number" step={cfg.step||1} value={entry.nominal} onChange={ev=>setEntry({...entry,nominal:ev.target.value})} style={INP}/></div>
           <div><label style={LBL}>{cfg.refLabel}</label><input type="number" step={cfg.step||0.1} value={entry.reference} onChange={ev=>setEntry({...entry,reference:ev.target.value})} onKeyDown={ev=>ev.key==='Enter'&&addPoint()} style={INP}/></div>
-          <button onClick={addPoint} style={{padding:'7px 14px',background:'#1B2A3B',color:'#00C896',border:'1px solid #00C89640',borderRadius:6,fontSize:16,cursor:'pointer',fontWeight:700,height:36,alignSelf:'end'}}>+</button>
+          <button onClick={addPoint} style={{padding:'7px 14px',background:'#22344C',color:'#00C896',border:'1px solid #00C89640',borderRadius:6,fontSize:16,cursor:'pointer',fontWeight:700,height:36,alignSelf:'end'}}>+</button>
         </div>
         {p.points.length>0&&<>
           <table style={{width:'100%',borderCollapse:'collapse',fontSize:12,marginBottom:12}}>
@@ -850,7 +884,7 @@ function CalScreen({cal,setCal}){
           <div style={{gridColumn:'1/-1'}}><label style={LBL}>Próxima calibración</label><input type="date" value={p.nextDate||''} onChange={ev=>setMeta('nextDate',ev.target.value)} style={{...INP,fontFamily:'Inter,sans-serif'}}/></div>
         </div>
       </div>
-      <button onClick={()=>window.print()} style={{width:'100%',padding:'12px',background:'#1B2A3B',color:'white',border:'none',borderRadius:8,fontSize:14,cursor:'pointer',fontWeight:600}}>🖨 Certificado de calibración</button>
+      <button onClick={()=>window.print()} style={{width:'100%',padding:'12px',background:'#22344C',color:'white',border:'none',borderRadius:8,fontSize:14,cursor:'pointer',fontWeight:600}}>🖨 Certificado de calibración</button>
     </div>
   );
 }
@@ -865,13 +899,13 @@ function InformeScreen({eq,setEq}){
           {[['marca','Marca'],['modelo','Modelo'],['serie','N° Serie'],['cliente','Cliente'],['tecnico','Técnico'],['ot','N° OT']].map(([k,l])=>(<div key={k}><label style={LBL}>{l}</label><input value={eq[k]||''} onChange={ev=>setEq(p=>({...p,[k]:ev.target.value}))} style={{...INP,fontFamily:'Inter,sans-serif'}}/></div>))}
         </div>
       </div>
-      <button onClick={()=>window.print()} style={{width:'100%',padding:'12px',background:'#1B2A3B',color:'white',border:'none',borderRadius:8,fontSize:14,cursor:'pointer',fontWeight:600,marginBottom:14}}>🖨 Imprimir informe</button>
+      <button onClick={()=>window.print()} style={{width:'100%',padding:'12px',background:'#22344C',color:'white',border:'none',borderRadius:8,fontSize:14,cursor:'pointer',fontWeight:600,marginBottom:14}}>🖨 Imprimir informe</button>
       <div id="print-area" style={{background:'white',border:'1px solid #E2E8F0',borderRadius:8,padding:24}}>
         <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:14}}>
           <div>
             <div style={{fontFamily:'Space Mono,monospace',fontSize:9,letterSpacing:'0.15em',color:'#aaa',textTransform:'uppercase'}}>Soluciones Electromédicas SJ — SEM</div>
             <div style={{fontSize:18,fontWeight:700,color:'#1A2535',marginTop:3}}>Informe de Verificación</div>
-            <div style={{fontSize:12,color:'#5A6B7E'}}>SEM Simulator v3.3</div>
+            <div style={{fontSize:12,color:'#5A6B7E'}}>SEM Simulator v3.4</div>
           </div>
           <div style={{textAlign:'right'}}><div style={{fontFamily:'Space Mono,monospace',fontSize:11,fontWeight:700}}>{fecha}</div>{eq.ot&&<div style={{fontFamily:'Space Mono,monospace',fontSize:10,color:'#aaa'}}>OT #{eq.ot}</div>}</div>
         </div>
@@ -880,7 +914,7 @@ function InformeScreen({eq,setEq}){
           {[['Marca',eq.marca],['Modelo',eq.modelo],['N° Serie',eq.serie],['Cliente',eq.cliente],['Técnico',eq.tecnico]].map(([l,v])=>(<div key={l} style={{display:'flex',gap:8,fontSize:12}}><span style={{color:'#5A6B7E',minWidth:70}}>{l}:</span><span style={{fontWeight:600}}>{v||'—'}</span></div>))}
         </div>
         <div style={{height:1,background:'#E2E8F0',margin:'12px 0'}}/>
-        <div style={{fontSize:11,color:'#aaa',lineHeight:1.6,marginBottom:24}}>Verificación realizada con SEM Simulator v3.3 calibrado. Criterios: NIBP → AAMI SP10/ISO 81060-2 · SpO₂ → ISO 9919 · Temperatura → IEC 60601-2-56.</div>
+        <div style={{fontSize:11,color:'#aaa',lineHeight:1.6,marginBottom:24}}>Verificación realizada con SEM Simulator v3.4 calibrado. Criterios: NIBP → AAMI SP10/ISO 81060-2 · SpO₂ → ISO 9919 · Temperatura → IEC 60601-2-56.</div>
         <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:40,marginTop:40}}>
           <div style={{borderTop:'1px solid #ccc',paddingTop:8,fontSize:12,color:'#aaa'}}>Firma y sello del técnico</div>
           <div style={{borderTop:'1px solid #ccc',paddingTop:8,fontSize:12,color:'#aaa'}}>Conformidad del cliente</div>
@@ -989,14 +1023,14 @@ function App(){
     sendRef.current={...cv,rhythm,ecgMode,amplitude:corrAmp,stOffset,running};
   });
 
-  const SCREEN_TITLES={home:'SEM Simulator',monitor:'Monitor Multiparamétrico',spo2:'Saturometría SpO₂',ecg:'ECG / Calibración',cal:'Calibración',verif:'Verificación',informe:'Informe'};
+  const SCREEN_TITLES={home:'SEM Simulator',monitor:'Monitor Multiparamétrico',spo2:'Saturometría SpO₂',ecg:'ECG',ajustes:'Ajustes',verif:'Verificación',informe:'Informe'};
 
   if(!appReady) return <ConnectScreen onConnect={handleConnect} onDemo={handleDemo}/>;
 
   return(
-    <div style={{display:'flex',flexDirection:'column',height:'100vh',background:'#07090F'}}>
+    <div style={{display:'flex',flexDirection:'column',height:'100vh',background:'#0E1826'}}>
       {/* HEADER */}
-      <div id="app-header" style={{background:'#0B1520',padding:'0 16px',height:52,display:'flex',alignItems:'center',gap:10,flexShrink:0,borderBottom:'1px solid #1A2535'}}>
+      <div id="app-header" style={{background:'#152238',padding:'0 16px',height:52,display:'flex',alignItems:'center',gap:10,flexShrink:0,borderBottom:'1px solid #1A2535'}}>
         {screen!=='home'?(
           <button onClick={()=>setScreen('home')} style={{background:'none',border:'none',cursor:'pointer',color:'#00C896',fontSize:22,lineHeight:1,padding:'4px 6px 4px 0',display:'flex',alignItems:'center'}}>←</button>
         ):(
@@ -1013,11 +1047,11 @@ function App(){
 
       {/* SCREENS */}
       <div style={{flex:1,overflow:'hidden',display:'flex',flexDirection:'column'}}>
-        {screen==='home'&&<HomeScreen cv={cv} rhythm={rhythm} running={running} ecgMode={ecgMode} amplitude={corrAmp} stOffset={stOffset} cal={cal} anyCal={anyCal} setScreen={setScreen} sensorData={sensorData} tempIsReal={realTemp}/>}
-        {screen==='monitor'&&<MonitorScreen vitals={vitals} setV={setV} cv={cv} rhythm={rhythm} setRhythm={setRhythm} running={running} ecgMode={ecgMode} amplitude={corrAmp} stOffset={stOffset} cal={cal} prog={prog} setProg={setProg} applyProg={applyProg} setScreen={setScreen} connMode={connMode} tempIsReal={realTemp}/>}
-        {screen==='spo2'&&<Spo2Screen vitals={vitals} setV={setV} cv={cv} rhythm={rhythm} setRhythm={setRhythm} running={running} ecgMode={ecgMode} amplitude={corrAmp} stOffset={stOffset} cal={cal} brand={spo2Brand} setBrand={setSpo2Brand}/>}
+        {screen==='home'&&<HomeScreen cv={cv} rhythm={rhythm} amplitude={corrAmp} cal={cal} anyCal={anyCal} setScreen={setScreen} sensorData={sensorData}/>}
+        {screen==='monitor'&&<MonitorScreen vitals={vitals} setV={setV} cv={cv} rhythm={rhythm} setRhythm={setRhythm} running={running} ecgMode={ecgMode} amplitude={corrAmp} stOffset={stOffset} cal={cal} prog={prog} setProg={setProg} applyProg={applyProg} tempIsReal={realTemp}/>}
+        {screen==='spo2'&&<Spo2Screen vitals={vitals} setV={setV} cv={cv} rhythm={rhythm} setRhythm={setRhythm} running={running} ecgMode={ecgMode} amplitude={corrAmp} stOffset={stOffset} cal={cal} brand={spo2Brand} setBrand={setSpo2Brand} prog={prog} setProg={setProg} applyProg={applyProg}/>}
         {screen==='ecg'&&<EcgScreen vitals={vitals} setV={setV} cv={cv} rhythm={rhythm} setRhythm={setRhythm} running={running} ecgMode={ecgMode} setEcgMode={setEcgMode} amplitude={amplitude} setAmplitude={setAmplitude} stOffset={stOffset} setStOffset={setStOffset} cal={cal} prog={prog} setProg={setProg} applyProg={applyProg}/>}
-        {screen==='cal'&&<CalScreen cal={cal} setCal={setCal}/>}
+        {screen==='ajustes'&&<AjustesScreen cal={cal} setCal={setCal} connMode={connMode}/>}
         {screen==='verif'&&<VerifScreen vitals={{hr:cv.hr,spo2:cv.spo2,sys:cv.sys,dia:cv.dia,temp:cv.temp}} sensorData={sensorData}/>}
         {screen==='informe'&&<InformeScreen eq={eq} setEq={setEq}/>}
       </div>
