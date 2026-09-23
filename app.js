@@ -2327,6 +2327,16 @@ function EcgScreen({
     selectedId: rhythm,
     onSelect: it => setRhythm(it.id)
   })), /*#__PURE__*/React.createElement(MiniSec, {
+    title: "Frecuencia (FC)"
+  }, /*#__PURE__*/React.createElement(ChipRow, {
+    items: [40, 60, 80, 100, 120, 150, 180].map(v => ({
+      id: v,
+      label: `${v} bpm`,
+      color: '#00C896'
+    })),
+    selectedId: vitals.hr,
+    onSelect: it => setV('hr', it.id)
+  })), /*#__PURE__*/React.createElement(MiniSec, {
     title: "Programas cl\xEDnicos"
   }, /*#__PURE__*/React.createElement(ChipRow, {
     items: PROGRAMS,
@@ -2343,6 +2353,40 @@ function EcgScreen({
       paddingTop: 8
     }
   }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 11,
+      color: '#5A6B7E',
+      fontWeight: 500,
+      marginBottom: 4
+    }
+  }, "FC: ", /*#__PURE__*/React.createElement("b", {
+    style: {
+      color: '#1A2535'
+    }
+  }, vitals.hr, " bpm")), /*#__PURE__*/React.createElement("input", {
+    type: "range",
+    min: 20,
+    max: 220,
+    step: 1,
+    value: vitals.hr,
+    onChange: e => setV('hr', parseInt(e.target.value)),
+    style: {
+      marginBottom: 4
+    }
+  }), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      justifyContent: 'space-between',
+      fontSize: 10,
+      color: '#aaa',
+      marginBottom: 18
+    }
+  }, /*#__PURE__*/React.createElement("span", null, "20"), /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: '#00C896',
+      fontWeight: 600
+    }
+  }, "bpm"), /*#__PURE__*/React.createElement("span", null, "220")), /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 11,
       color: '#5A6B7E',

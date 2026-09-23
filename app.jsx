@@ -663,6 +663,9 @@ function EcgScreen({vitals,setV,cv,rhythm,setRhythm,running,ecgMode,setEcgMode,a
             <MiniSec title="Ritmo ECG">
               <ChipRow items={Object.entries(RHYTHM_INFO).map(([id,info])=>({id,label:info.label,color:id==='sinusal'?'#22344C':id==='marcap'?'#9B59B6':['vfib','asistolia'].includes(id)?'#E63946':'#F5A623'}))} selectedId={rhythm} onSelect={it=>setRhythm(it.id)}/>
             </MiniSec>
+            <MiniSec title="Frecuencia (FC)">
+              <ChipRow items={[40,60,80,100,120,150,180].map(v=>({id:v,label:`${v} bpm`,color:'#00C896'}))} selectedId={vitals.hr} onSelect={it=>setV('hr',it.id)}/>
+            </MiniSec>
             <MiniSec title="Programas clínicos">
               <ChipRow items={PROGRAMS} selectedId={prog} onSelect={applyProg}/>
             </MiniSec>
@@ -670,6 +673,11 @@ function EcgScreen({vitals,setV,cv,rhythm,setRhythm,running,ecgMode,setEcgMode,a
         </Sec>
         <Sec icon={<IconSliders size={18} color="#5A6B7E"/>} title="Parámetros">
           <div style={{paddingTop:8}}>
+            <div style={{fontSize:11,color:'#5A6B7E',fontWeight:500,marginBottom:4}}>
+              FC: <b style={{color:'#1A2535'}}>{vitals.hr} bpm</b>
+            </div>
+            <input type="range" min={20} max={220} step={1} value={vitals.hr} onChange={e=>setV('hr',parseInt(e.target.value))} style={{marginBottom:4}}/>
+            <div style={{display:'flex',justifyContent:'space-between',fontSize:10,color:'#aaa',marginBottom:18}}><span>20</span><span style={{color:'#00C896',fontWeight:600}}>bpm</span><span>220</span></div>
             <div style={{fontSize:11,color:'#5A6B7E',fontWeight:500,marginBottom:4}}>
               Amplitud: <b style={{color:'#1A2535'}}>{amplitude.toFixed(2)} mV</b>
               {cal.ecg.applied&&<span style={{fontSize:10,color:'#F5A623',marginLeft:6}}>→ {(amplitude*cal.ecg.gain).toFixed(2)} mV (cal)</span>}
