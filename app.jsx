@@ -590,6 +590,9 @@ function Spo2Screen({vitals,setV,cv,rhythm,setRhythm,running,ecgMode,amplitude,s
             <MiniSec title="Ritmo cardíaco">
               <ChipRow items={Object.entries(RHYTHM_INFO).map(([id,info])=>({id,label:info.label,color:id==='sinusal'?'#22344C':id==='marcap'?'#9B59B6':['vfib','asistolia'].includes(id)?'#E63946':'#F5A623'}))} selectedId={rhythm} onSelect={it=>{setRhythm(it.id);setProg(null);}}/>
             </MiniSec>
+            <MiniSec title="Frecuencia (FC)">
+              <ChipRow items={[40,60,80,100,120,150,180].map(v=>({id:v,label:`${v} bpm`,color:'#00BFFF'}))} selectedId={vitals.hr} onSelect={it=>setV('hr',it.id)}/>
+            </MiniSec>
             <MiniSec title="Marca / Protocolo de sonda">
               <div style={{display:'flex',gap:6,marginBottom:10}}>
                 {Object.entries(SPO2_BRANDS).map(([id,bb])=>(

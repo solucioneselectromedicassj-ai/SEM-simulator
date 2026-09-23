@@ -2048,6 +2048,16 @@ function Spo2Screen({
       setProg(null);
     }
   })), /*#__PURE__*/React.createElement(MiniSec, {
+    title: "Frecuencia (FC)"
+  }, /*#__PURE__*/React.createElement(ChipRow, {
+    items: [40, 60, 80, 100, 120, 150, 180].map(v => ({
+      id: v,
+      label: `${v} bpm`,
+      color: '#00BFFF'
+    })),
+    selectedId: vitals.hr,
+    onSelect: it => setV('hr', it.id)
+  })), /*#__PURE__*/React.createElement(MiniSec, {
     title: "Marca / Protocolo de sonda"
   }, /*#__PURE__*/React.createElement("div", {
     style: {

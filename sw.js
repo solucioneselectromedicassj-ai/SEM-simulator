@@ -1,4 +1,4 @@
-const CACHE = 'sem-simulator-v5';
+const CACHE = 'sem-simulator-v6';
 const ASSETS = [
   '/', '/index.html', '/manifest.json', '/app.js',
   '/icon-192.png', '/icon-512.png', '/icon.svg', '/apple-touch-icon.png',
