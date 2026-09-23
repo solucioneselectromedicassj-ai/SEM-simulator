@@ -2966,7 +2966,9 @@ function VerifScreen({
 function AjustesScreen({
   cal,
   setCal,
-  connMode
+  connMode,
+  bleReconnecting,
+  onReconnect
 }) {
   const [param, setParam] = useState('nibp');
   const [entry, setEntry] = useState({
@@ -3083,19 +3085,36 @@ function AjustesScreen({
     size: 20
   }) : /*#__PURE__*/React.createElement(IconWifi, {
     size: 20
-  })), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+  })), /*#__PURE__*/React.createElement("div", {
+    style: {
+      flex: 1
+    }
+  }, /*#__PURE__*/React.createElement("div", {
     style: {
       fontWeight: 600,
       fontSize: 13,
-      color: connMode !== 'demo' ? '#00C896' : '#5A6B7E'
+      color: connMode !== 'demo' ? '#00C896' : bleReconnecting ? '#F5A623' : '#5A6B7E'
     }
-  }, connMode === 'wifi' ? 'Conectado por WiFi' : connMode === 'ble' ? 'Conectado por Bluetooth' : 'Sin conexión — modo demo'), /*#__PURE__*/React.createElement("div", {
+  }, bleReconnecting ? 'Reconectando por Bluetooth...' : connMode === 'wifi' ? 'Conectado por WiFi' : connMode === 'ble' ? 'Conectado por Bluetooth' : 'Sin conexión — modo demo'), /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 11,
       color: '#94A3B8',
       marginTop: 2
     }
-  }, "M\xF3dulo SEM"))), /*#__PURE__*/React.createElement("div", {
+  }, "M\xF3dulo SEM")), connMode === 'demo' && !bleReconnecting && 'bluetooth' in navigator && /*#__PURE__*/React.createElement("button", {
+    onClick: onReconnect,
+    style: {
+      padding: '7px 12px',
+      fontSize: 12,
+      fontWeight: 600,
+      background: '#152238',
+      color: 'white',
+      border: 'none',
+      borderRadius: 6,
+      cursor: 'pointer',
+      flexShrink: 0
+    }
+  }, "Reconectar")), /*#__PURE__*/React.createElement("div", {
     style: {
       marginBottom: 14,
       padding: '12px 14px',
@@ -3775,6 +3794,57 @@ function App() {
   // Ref con valores actuales para los intervals de WiFi y BLE
   // (evita closure stale — siempre manda lo que hay en pantalla)
   const sendRef = useRef({});
+  const [bleReconnecting, setBleReconnecting] = useState(false);
+
+  // Suscribe a las características GATT de un server BLE ya conectado y
+  // arranca el envío periódico de vitals. Se usa tanto en la conexión
+  // inicial como en cada reconexión automática (el server GATT es un
+  // objeto nuevo cada vez que se reconecta, hay que resuscribirse siempre).
+  const subscribeBLE = async (device, server) => {
+    const svc = await server.getPrimaryService('4fafc201-1fb5-459e-8fcc-c5c9c331914b');
+    const vChar = await svc.getCharacteristic('beb5483e-36e1-4688-b7f5-ea07361b26a8');
+    await vChar.startNotifications();
+    vChar.addEventListener('characteristicvaluechanged', e => {
+      try {
+        const d = JSON.parse(new TextDecoder().decode(e.target.value));
+        if (d.type === 'sensors') setSensorData(d);
+      } catch {}
+    });
+    const cChar = await svc.getCharacteristic('cba1d466-344c-4be3-ab3f-189f80dd7518');
+    if (device._iv) clearInterval(device._iv);
+    device._iv = setInterval(async () => {
+      if (server.connected) try {
+        await cChar.writeValue(new TextEncoder().encode(JSON.stringify({
+          ...sendRef.current,
+          ts: Date.now()
+        })));
+      } catch {}
+    }, 500);
+  };
+
+  // El módulo se corta seguido si el celular apaga la pantalla o pasa a
+  // segundo plano (Android suelta la conexión BLE de la pestaña). En vez
+  // de tirar todo a "modo demo" de una y obligar a re-sincronizar a mano,
+  // reintenta reconectar solo unas cuantas veces antes de rendirse.
+  const reconnectBLE = (device, attempt = 0) => {
+    setBleReconnecting(true);
+    device.gatt.connect().then(server => subscribeBLE(device, server)).then(() => {
+      setBleReconnecting(false);
+      setConnMode('ble');
+    }).catch(() => {
+      if (attempt < 5) {
+        setTimeout(() => reconnectBLE(device, attempt + 1), 1500 * (attempt + 1));
+      } else {
+        setBleReconnecting(false);
+        setConnMode('demo');
+      }
+    });
+  };
+  const armBLEDisconnectHandler = device => {
+    if (device._semDiscHandler) device.removeEventListener('gattserverdisconnected', device._semDiscHandler);
+    device._semDiscHandler = () => reconnectBLE(device);
+    device.addEventListener('gattserverdisconnected', device._semDiscHandler);
+  };
 
   // Manejar conexión desde ConnectScreen
   const handleConnect = (mode, conn) => {
@@ -3803,28 +3873,7 @@ function App() {
         device,
         server
       } = conn;
-      server.getPrimaryService('4fafc201-1fb5-459e-8fcc-c5c9c331914b').then(async svc => {
-        // Suscribir a notificaciones del ESP32 (temperatura real, batería)
-        const vChar = await svc.getCharacteristic('beb5483e-36e1-4688-b7f5-ea07361b26a8');
-        await vChar.startNotifications();
-        vChar.addEventListener('characteristicvaluechanged', e => {
-          try {
-            const d = JSON.parse(new TextDecoder().decode(e.target.value));
-            if (d.type === 'sensors') setSensorData(d);
-          } catch {}
-        });
-        // Enviar vitals al ESP32 cada 500ms
-        const cChar = await svc.getCharacteristic('cba1d466-344c-4be3-ab3f-189f80dd7518');
-        device._iv = setInterval(async () => {
-          if (server.connected) try {
-            await cChar.writeValue(new TextEncoder().encode(JSON.stringify({
-              ...sendRef.current,
-              ts: Date.now()
-            })));
-          } catch {}
-        }, 500);
-        device.addEventListener('gattserverdisconnected', () => setConnMode('demo'));
-      }).catch(e => console.warn('[BLE]', e));
+      subscribeBLE(device, server).then(() => armBLEDisconnectHandler(device)).catch(e => console.warn('[BLE]', e));
     }
     setAppReady(true);
   };
@@ -3832,6 +3881,53 @@ function App() {
     setConnMode('demo');
     setAppReady(true);
   };
+
+  // Reconexión manual desde Ajustes: usa la API de permisos persistentes
+  // (sin volver a mostrar el selector) para el caso en que los reintentos
+  // automáticos ya se agotaron.
+  const handleManualReconnect = async () => {
+    if (!('bluetooth' in navigator) || !navigator.bluetooth.getDevices) return;
+    try {
+      const devices = await navigator.bluetooth.getDevices();
+      const known = devices.find(d => d.name === 'SEM-Simulator' || d.name === 'SEM-Sim');
+      if (!known) return;
+      const server = await known.gatt.connect();
+      await subscribeBLE(known, server);
+      armBLEDisconnectHandler(known);
+      setConnMode('ble');
+    } catch (e) {
+      console.warn('[BLE]', e);
+    }
+  };
+
+  // Mantener la pantalla encendida mientras hay una conexión real al
+  // módulo: si el celular apaga la pantalla por inactividad, Android corta
+  // la conexión BLE de la pestaña y obliga a re-sincronizar a mano. El
+  // Wake Lock se libera solo cuando la pestaña pasa a segundo plano (así
+  // lo define la API), por eso hay que re-pedirlo al volver a estar visible.
+  const wakeLockRef = useRef(null);
+  useEffect(() => {
+    if (connMode === 'demo' || !('wakeLock' in navigator)) return;
+    let cancelled = false;
+    const acquire = () => {
+      navigator.wakeLock.request('screen').then(lock => {
+        if (cancelled) lock.release().catch(() => {});else wakeLockRef.current = lock;
+      }).catch(() => {});
+    };
+    acquire();
+    const onVis = () => {
+      if (document.visibilityState === 'visible') acquire();
+    };
+    document.addEventListener('visibilitychange', onVis);
+    return () => {
+      cancelled = true;
+      document.removeEventListener('visibilitychange', onVis);
+      if (wakeLockRef.current) {
+        wakeLockRef.current.release().catch(() => {});
+        wakeLockRef.current = null;
+      }
+    };
+  }, [connMode]);
   const setV = (k, v) => {
     setVitals(prev => ({
       ...prev,
@@ -4033,7 +4129,9 @@ function App() {
   }), screen === 'ajustes' && /*#__PURE__*/React.createElement(AjustesScreen, {
     cal: cal,
     setCal: setCal,
-    connMode: connMode
+    connMode: connMode,
+    bleReconnecting: bleReconnecting,
+    onReconnect: handleManualReconnect
   }), screen === 'verif' && /*#__PURE__*/React.createElement(VerifScreen, {
     vitals: {
       hr: cv.hr,
