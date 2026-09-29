@@ -2516,7 +2516,8 @@ const errClr = v => {
 const fmt = (v, d = 1) => isNaN(v) ? '—' : `${v > 0 ? '+' : ''}${v.toFixed(d)}`;
 function VerifScreen({
   vitals,
-  sensorData
+  sensorData,
+  setNibpRefMode
 }) {
   const [param, setParam] = useState('nibp');
   const [meas, setMeas] = useState([]);
@@ -2530,7 +2531,8 @@ function VerifScreen({
     tTemp: '',
     mTemp: '',
     tHr: '',
-    mHr: ''
+    mHr: '',
+    needle: ''
   });
   useEffect(() => {
     setE(p => ({
@@ -2551,7 +2553,32 @@ function VerifScreen({
       }));
     }
   }, [sensorData]);
+  // Aneroide: mientras esta pestaña está activa, el módulo no debe pulsar
+  // el solenoide (el técnico infla a mano con la perilla) — solo leer la
+  // presión real como referencia. Se desactiva solo al salir de la pestaña
+  // o de la pantalla.
+  useEffect(() => {
+    if (!setNibpRefMode) return;
+    setNibpRefMode(param === 'aneroide');
+    return () => setNibpRefMode(false);
+  }, [param, setNibpRefMode]);
   const add = () => {
+    if (param === 'aneroide') {
+      const needle = parseFloat(e.needle);
+      const ref = sensorData && typeof sensorData.pressure === 'number' ? sensorData.pressure : null;
+      if (isNaN(needle) || ref === null) return;
+      setMeas(p => [...p, {
+        id: Date.now(),
+        param,
+        needle,
+        ref
+      }]);
+      setE(p => ({
+        ...p,
+        needle: ''
+      }));
+      return;
+    }
     setMeas(p => [...p, {
       id: Date.now(),
       param,
@@ -2570,6 +2597,7 @@ function VerifScreen({
   const fil = meas.filter(m => m.param === param);
   const sysE = fil.map(m => parseFloat(m.mSys) - parseFloat(m.tSys)).filter(v => !isNaN(v));
   const diaE = fil.map(m => parseFloat(m.mDia) - parseFloat(m.tDia)).filter(v => !isNaN(v));
+  const aneE = fil.map(m => m.needle - m.ref).filter(v => !isNaN(v));
   const Th = ({
     c
   }) => /*#__PURE__*/React.createElement("th", {
@@ -2609,7 +2637,7 @@ function VerifScreen({
       marginBottom: 14,
       flexWrap: 'wrap'
     }
-  }, [['nibp', 'NIBP'], ['spo2', 'SpO₂'], ['temp', 'Temp'], ['hr', 'FC']].map(([id, lbl]) => /*#__PURE__*/React.createElement("button", {
+  }, [['nibp', 'NIBP electrónico'], ['aneroide', 'Aneroide'], ['spo2', 'SpO₂'], ['temp', 'Temp'], ['hr', 'FC']].map(([id, lbl]) => /*#__PURE__*/React.createElement("button", {
     key: id,
     onClick: () => setParam(id),
     style: {
@@ -2672,7 +2700,77 @@ function VerifScreen({
       height: 36,
       alignSelf: 'end'
     }
-  }, "+")), param === 'spo2' && /*#__PURE__*/React.createElement("div", {
+  }, "+")), param === 'aneroide' && /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    style: {
+      padding: '10px 14px',
+      background: '#0E1826',
+      borderRadius: 8,
+      marginBottom: 12,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between'
+    }
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontFamily: 'Space Mono,monospace',
+      fontSize: 9,
+      color: 'rgba(0,200,150,0.6)',
+      letterSpacing: '0.1em',
+      textTransform: 'uppercase'
+    }
+  }, "Referencia SEM (en vivo)"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontFamily: 'Space Mono,monospace',
+      fontSize: 28,
+      fontWeight: 700,
+      color: '#00C896',
+      lineHeight: 1.3
+    }
+  }, sensorData && typeof sensorData.pressure === 'number' ? sensorData.pressure.toFixed(0) : '—', " ", /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 13,
+      fontWeight: 500
+    }
+  }, "mmHg"))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 11,
+      color: 'rgba(255,255,255,0.5)',
+      maxWidth: 150,
+      textAlign: 'right'
+    }
+  }, "Infl\xE1 con la perilla del aneroide \u2014 manguera unida por T al sensor")), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'grid',
+      gridTemplateColumns: '1fr auto',
+      gap: 8,
+      alignItems: 'end'
+    }
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("label", {
+    style: LBL
+  }, "Aguja aneroide (mmHg)"), /*#__PURE__*/React.createElement("input", {
+    type: "number",
+    value: e.needle,
+    onChange: ev => setE({
+      ...e,
+      needle: ev.target.value
+    }),
+    onKeyDown: ev => ev.key === 'Enter' && add(),
+    style: INP
+  })), /*#__PURE__*/React.createElement("button", {
+    onClick: add,
+    style: {
+      padding: '7px 14px',
+      background: '#00C896',
+      color: 'white',
+      border: 'none',
+      borderRadius: 6,
+      fontSize: 16,
+      cursor: 'pointer',
+      fontWeight: 700,
+      height: 36,
+      alignSelf: 'end'
+    }
+  }, "+"))), param === 'spo2' && /*#__PURE__*/React.createElement("div", {
     style: {
       display: 'grid',
       gridTemplateColumns: '1fr 1fr auto',
@@ -2815,6 +2913,14 @@ function VerifScreen({
     c: "\u0394 SYS"
   }), /*#__PURE__*/React.createElement(Th, {
     c: "\u0394 DIA"
+  })), param === 'aneroide' && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement(Th, {
+    c: "Referencia SEM"
+  }), /*#__PURE__*/React.createElement(Th, {
+    c: "Aguja"
+  }), /*#__PURE__*/React.createElement(Th, {
+    c: "\u0394"
+  }), /*#__PURE__*/React.createElement(Th, {
+    c: "Estado"
   })), param === 'spo2' && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement(Th, {
     c: "Target"
   }), /*#__PURE__*/React.createElement(Th, {
@@ -2841,6 +2947,7 @@ function VerifScreen({
     const spE = parseFloat(m.mSpo2) - parseFloat(m.tSpo2),
       tpE = parseFloat(m.mTemp) - parseFloat(m.tTemp),
       hrE = parseFloat(m.mHr) - parseFloat(m.tHr);
+    const aneOk = param === 'aneroide' && Math.abs(m.needle - m.ref) <= 3;
     return /*#__PURE__*/React.createElement("tr", {
       key: m.id,
       style: {
@@ -2878,6 +2985,26 @@ function VerifScreen({
       s: {
         fontWeight: 600,
         color: errClr(dE2)
+      }
+    })), param === 'aneroide' && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement(Td, {
+      c: m.ref.toFixed(0) + ' mmHg'
+    }), /*#__PURE__*/React.createElement(Td, {
+      c: m.needle + ' mmHg',
+      s: {
+        fontWeight: 700
+      }
+    }), /*#__PURE__*/React.createElement(Td, {
+      c: fmt(m.needle - m.ref) + ' mmHg',
+      s: {
+        fontWeight: 600,
+        color: aneOk ? '#00C896' : '#E63946'
+      }
+    }), /*#__PURE__*/React.createElement(Td, {
+      c: aneOk ? 'OK' : 'FALLA',
+      s: {
+        fontSize: 9,
+        fontWeight: 700,
+        color: aneOk ? '#00C896' : '#E63946'
       }
     })), param === 'spo2' && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement(Td, {
       c: m.tSpo2 + '%'
@@ -3009,6 +3136,50 @@ function VerifScreen({
         color: '#aaa'
       }
     }, "n=", sysE.length, sysE.length < 5 ? ' · ⚠ mín. 5' : ''))));
+  })(), param === 'aneroide' && aneE.length > 0 && (() => {
+    const worst = Math.max(...aneE.map(Math.abs)),
+      pass = worst <= 3;
+    return /*#__PURE__*/React.createElement("div", {
+      style: {
+        background: 'white',
+        border: '1px solid #E2E8F0',
+        borderRadius: 8,
+        padding: 14
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 11,
+        fontWeight: 600,
+        color: '#5A6B7E',
+        textTransform: 'uppercase',
+        letterSpacing: '0.05em',
+        marginBottom: 10
+      }
+    }, "Exactitud aneroide \u2014 tolerancia \xB13 mmHg por punto"), /*#__PURE__*/React.createElement("div", {
+      style: {
+        padding: '10px 14px',
+        borderRadius: 6,
+        display: 'flex',
+        alignItems: 'center',
+        gap: 10,
+        background: pass ? 'rgba(0,200,150,0.08)' : 'rgba(230,57,70,0.08)',
+        border: `1px solid ${pass ? 'rgba(0,200,150,0.3)' : 'rgba(230,57,70,0.3)'}`
+      }
+    }, /*#__PURE__*/React.createElement("span", {
+      style: {
+        fontSize: 18
+      }
+    }, pass ? '✅' : '❌'), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontWeight: 700,
+        color: pass ? '#00C896' : '#E63946'
+      }
+    }, pass ? 'APROBADO' : 'REPROBADO'), /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 11,
+        color: '#aaa'
+      }
+    }, "Peor error: ", worst.toFixed(1), " mmHg \xB7 n=", aneE.length, aneE.length < 3 ? ' · ⚠ verificá varios puntos de la escala (ej: 50, 100, 150, 200 mmHg)' : ''))));
   })()), fil.length === 0 && /*#__PURE__*/React.createElement("div", {
     style: {
       textAlign: 'center',
@@ -3810,6 +3981,7 @@ function App() {
   const [ecgMode, setEcgMode] = useState('cardiaco');
   const [amplitude, setAmplitude] = useState(1.0);
   const [stOffset, setStOffset] = useState(0.0);
+  const [nibpRefMode, setNibpRefMode] = useState(false);
   const [spo2Brand, setSpo2Brand] = useState('nellcor');
   const [eq, setEq] = useState({
     marca: '',
@@ -4027,7 +4199,8 @@ function App() {
       ecgMode,
       amplitude: corrAmp,
       stOffset,
-      running
+      running,
+      nibpRefMode
     };
   });
   const SCREEN_TITLES = {
@@ -4194,7 +4367,8 @@ function App() {
       dia: cv.dia,
       temp: cv.temp
     },
-    sensorData: sensorData
+    sensorData: sensorData,
+    setNibpRefMode: setNibpRefMode
   }), screen === 'informe' && /*#__PURE__*/React.createElement(InformeScreen, {
     eq: eq,
     setEq: setEq

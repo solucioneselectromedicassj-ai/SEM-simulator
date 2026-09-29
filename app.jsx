@@ -712,10 +712,10 @@ function calcStat(errors){if(!errors.length)return null;const m=errors.reduce((a
 const errClr=v=>{const a=Math.abs(v);return a<=3?'#00C896':a<=8?'#F5A623':'#E63946';};
 const fmt=(v,d=1)=>isNaN(v)?'—':`${v>0?'+':''}${v.toFixed(d)}`;
 
-function VerifScreen({vitals, sensorData}){
+function VerifScreen({vitals, sensorData, setNibpRefMode}){
   const [param,setParam]=useState('nibp');
   const [meas,setMeas]=useState([]);
-  const [e,setE]=useState({tSys:'',tDia:'',mSys:'',mDia:'',tSpo2:'',mSpo2:'',tTemp:'',mTemp:'',tHr:'',mHr:''});
+  const [e,setE]=useState({tSys:'',tDia:'',mSys:'',mDia:'',tSpo2:'',mSpo2:'',tTemp:'',mTemp:'',tHr:'',mHr:'',needle:''});
   useEffect(()=>{setE(p=>({...p,tSys:String(vitals.sys),tDia:String(vitals.dia),tSpo2:String(vitals.spo2),tTemp:String(vitals.temp),tHr:String(vitals.hr)}));},[vitals]);
   // Auto-cargar temperatura real del DS18B20 cuando llega del ESP32
   useEffect(()=>{
@@ -723,17 +723,37 @@ function VerifScreen({vitals, sensorData}){
       setE(p=>({...p,tTemp:String(sensorData.tempRef)}));
     }
   },[sensorData]);
-  const add=()=>{setMeas(p=>[...p,{id:Date.now(),param,...e}]);setE(p=>({...p,mSys:'',mDia:'',mSpo2:'',mTemp:'',mHr:''}));};
+  // Aneroide: mientras esta pestaña está activa, el módulo no debe pulsar
+  // el solenoide (el técnico infla a mano con la perilla) — solo leer la
+  // presión real como referencia. Se desactiva solo al salir de la pestaña
+  // o de la pantalla.
+  useEffect(()=>{
+    if(!setNibpRefMode)return;
+    setNibpRefMode(param==='aneroide');
+    return()=>setNibpRefMode(false);
+  },[param,setNibpRefMode]);
+  const add=()=>{
+    if(param==='aneroide'){
+      const needle=parseFloat(e.needle);
+      const ref=sensorData&&typeof sensorData.pressure==='number'?sensorData.pressure:null;
+      if(isNaN(needle)||ref===null)return;
+      setMeas(p=>[...p,{id:Date.now(),param,needle,ref}]);
+      setE(p=>({...p,needle:''}));
+      return;
+    }
+    setMeas(p=>[...p,{id:Date.now(),param,...e}]);setE(p=>({...p,mSys:'',mDia:'',mSpo2:'',mTemp:'',mHr:''}));
+  };
   const del=id=>setMeas(p=>p.filter(m=>m.id!==id));
   const fil=meas.filter(m=>m.param===param);
   const sysE=fil.map(m=>parseFloat(m.mSys)-parseFloat(m.tSys)).filter(v=>!isNaN(v));
   const diaE=fil.map(m=>parseFloat(m.mDia)-parseFloat(m.tDia)).filter(v=>!isNaN(v));
+  const aneE=fil.map(m=>m.needle-m.ref).filter(v=>!isNaN(v));
   const Th=({c})=><th style={{padding:'6px 8px',fontSize:10,fontWeight:600,color:'#5A6B7E',textTransform:'uppercase',textAlign:'center'}}>{c}</th>;
   const Td=({c,s})=><td style={{padding:'6px 8px',textAlign:'center',fontFamily:'Space Mono,monospace',fontSize:12,...s}}>{c}</td>;
   return(
     <div className="screen" style={{height:'100%',overflow:'auto',background:'#F2F4F7',padding:14}}>
       <div style={{display:'flex',gap:6,marginBottom:14,flexWrap:'wrap'}}>
-        {[['nibp','NIBP'],['spo2','SpO₂'],['temp','Temp'],['hr','FC']].map(([id,lbl])=>(
+        {[['nibp','NIBP electrónico'],['aneroide','Aneroide'],['spo2','SpO₂'],['temp','Temp'],['hr','FC']].map(([id,lbl])=>(
           <button key={id} onClick={()=>setParam(id)} style={{padding:'7px 16px',fontSize:12,fontWeight:500,borderRadius:100,cursor:'pointer',border:param===id?'none':'1px solid #E2E8F0',background:param===id?'#00C896':'white',color:param===id?'white':'#5A6B7E'}}>{lbl}</button>
         ))}
       </div>
@@ -742,6 +762,19 @@ function VerifScreen({vitals, sensorData}){
         {param==='nibp'&&<div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr 1fr auto',gap:8,alignItems:'end'}}>
           {[['tSys','T-SYS'],['tDia','T-DIA'],['mSys','M-SYS'],['mDia','M-DIA']].map(([k,l])=>(<div key={k}><label style={LBL}>{l}</label><input type="number" value={e[k]} onChange={ev=>setE({...e,[k]:ev.target.value})} style={INP}/></div>))}
           <button onClick={add} style={{padding:'7px 14px',background:'#00C896',color:'white',border:'none',borderRadius:6,fontSize:16,cursor:'pointer',fontWeight:700,height:36,alignSelf:'end'}}>+</button>
+        </div>}
+        {param==='aneroide'&&<div>
+          <div style={{padding:'10px 14px',background:'#0E1826',borderRadius:8,marginBottom:12,display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+            <div>
+              <div style={{fontFamily:'Space Mono,monospace',fontSize:9,color:'rgba(0,200,150,0.6)',letterSpacing:'0.1em',textTransform:'uppercase'}}>Referencia SEM (en vivo)</div>
+              <div style={{fontFamily:'Space Mono,monospace',fontSize:28,fontWeight:700,color:'#00C896',lineHeight:1.3}}>{sensorData&&typeof sensorData.pressure==='number'?sensorData.pressure.toFixed(0):'—'} <span style={{fontSize:13,fontWeight:500}}>mmHg</span></div>
+            </div>
+            <div style={{fontSize:11,color:'rgba(255,255,255,0.5)',maxWidth:150,textAlign:'right'}}>Inflá con la perilla del aneroide — manguera unida por T al sensor</div>
+          </div>
+          <div style={{display:'grid',gridTemplateColumns:'1fr auto',gap:8,alignItems:'end'}}>
+            <div><label style={LBL}>Aguja aneroide (mmHg)</label><input type="number" value={e.needle} onChange={ev=>setE({...e,needle:ev.target.value})} onKeyDown={ev=>ev.key==='Enter'&&add()} style={INP}/></div>
+            <button onClick={add} style={{padding:'7px 14px',background:'#00C896',color:'white',border:'none',borderRadius:6,fontSize:16,cursor:'pointer',fontWeight:700,height:36,alignSelf:'end'}}>+</button>
+          </div>
         </div>}
         {param==='spo2'&&<div style={{display:'grid',gridTemplateColumns:'1fr 1fr auto',gap:8,alignItems:'end'}}>
           {[['tSpo2','Target %'],['mSpo2','Medido %']].map(([k,l])=>(<div key={k}><label style={LBL}>{l}</label><input type="number" value={e[k]} onChange={ev=>setE({...e,[k]:ev.target.value})} style={INP}/></div>))}
@@ -766,6 +799,7 @@ function VerifScreen({vitals, sensorData}){
           <table style={{width:'100%',borderCollapse:'collapse',fontSize:12}}>
             <thead><tr style={{background:'#F8F9FB'}}><Th c="#"/>
               {param==='nibp'&&<><Th c="T-SYS"/><Th c="T-DIA"/><Th c="M-SYS"/><Th c="M-DIA"/><Th c="Δ SYS"/><Th c="Δ DIA"/></>}
+              {param==='aneroide'&&<><Th c="Referencia SEM"/><Th c="Aguja"/><Th c="Δ"/><Th c="Estado"/></>}
               {param==='spo2'&&<><Th c="Target"/><Th c="Medido"/><Th c="Δ"/></>}
               {param==='temp'&&<><Th c="Ref."/><Th c="Monitor"/><Th c="Δ"/></>}
               {param==='hr'&&<><Th c="Target"/><Th c="Medido"/><Th c="Δ"/></>}
@@ -774,9 +808,11 @@ function VerifScreen({vitals, sensorData}){
             <tbody>{fil.map((m,i)=>{
               const sE2=parseFloat(m.mSys)-parseFloat(m.tSys),dE2=parseFloat(m.mDia)-parseFloat(m.tDia);
               const spE=parseFloat(m.mSpo2)-parseFloat(m.tSpo2),tpE=parseFloat(m.mTemp)-parseFloat(m.tTemp),hrE=parseFloat(m.mHr)-parseFloat(m.tHr);
+              const aneOk=param==='aneroide'&&Math.abs(m.needle-m.ref)<=3;
               return<tr key={m.id} style={{borderTop:'1px solid #F0F0F0'}}>
                 <Td c={i+1} s={{textAlign:'left',paddingLeft:12,color:'#aaa'}}/>
                 {param==='nibp'&&<><Td c={m.tSys}/><Td c={m.tDia}/><Td c={m.mSys} s={{fontWeight:700}}/><Td c={m.mDia} s={{fontWeight:700}}/><Td c={fmt(sE2)} s={{fontWeight:600,color:errClr(sE2)}}/><Td c={fmt(dE2)} s={{fontWeight:600,color:errClr(dE2)}}/></>}
+                {param==='aneroide'&&<><Td c={m.ref.toFixed(0)+' mmHg'}/><Td c={m.needle+' mmHg'} s={{fontWeight:700}}/><Td c={fmt(m.needle-m.ref)+' mmHg'} s={{fontWeight:600,color:aneOk?'#00C896':'#E63946'}}/><Td c={aneOk?'OK':'FALLA'} s={{fontSize:9,fontWeight:700,color:aneOk?'#00C896':'#E63946'}}/></>}
                 {param==='spo2'&&<><Td c={m.tSpo2+'%'}/><Td c={m.mSpo2+'%'} s={{fontWeight:700}}/><Td c={fmt(spE)+'%'} s={{fontWeight:600,color:errClr(spE*3)}}/></>}
                 {param==='temp'&&<><Td c={m.tTemp+'°C'}/><Td c={m.mTemp+'°C'} s={{fontWeight:700}}/><Td c={fmt(tpE,2)+'°C'} s={{fontWeight:600,color:errClr(Math.abs(tpE)*15)}}/></>}
                 {param==='hr'&&<><Td c={m.tHr}/><Td c={m.mHr} s={{fontWeight:700}}/><Td c={fmt(hrE)} s={{fontWeight:600,color:errClr(hrE)}}/></>}
@@ -795,6 +831,16 @@ function VerifScreen({vitals, sensorData}){
               <span style={{fontSize:18}}>{pass?'✅':'❌'}</span>
               <div><div style={{fontWeight:700,color:pass?'#00C896':'#E63946'}}>{pass?'APROBADO':'REPROBADO'}</div>
               <div style={{fontSize:11,color:'#aaa'}}>n={sysE.length}{sysE.length<5?' · ⚠ mín. 5':''}</div></div>
+            </div>
+          </div>
+        );})()}
+        {param==='aneroide'&&aneE.length>0&&(()=>{const worst=Math.max(...aneE.map(Math.abs)),pass=worst<=3;return(
+          <div style={{background:'white',border:'1px solid #E2E8F0',borderRadius:8,padding:14}}>
+            <div style={{fontSize:11,fontWeight:600,color:'#5A6B7E',textTransform:'uppercase',letterSpacing:'0.05em',marginBottom:10}}>Exactitud aneroide — tolerancia ±3 mmHg por punto</div>
+            <div style={{padding:'10px 14px',borderRadius:6,display:'flex',alignItems:'center',gap:10,background:pass?'rgba(0,200,150,0.08)':'rgba(230,57,70,0.08)',border:`1px solid ${pass?'rgba(0,200,150,0.3)':'rgba(230,57,70,0.3)'}`}}>
+              <span style={{fontSize:18}}>{pass?'✅':'❌'}</span>
+              <div><div style={{fontWeight:700,color:pass?'#00C896':'#E63946'}}>{pass?'APROBADO':'REPROBADO'}</div>
+              <div style={{fontSize:11,color:'#aaa'}}>Peor error: {worst.toFixed(1)} mmHg · n={aneE.length}{aneE.length<3?' · ⚠ verificá varios puntos de la escala (ej: 50, 100, 150, 200 mmHg)':''}</div></div>
             </div>
           </div>
         );})()}
@@ -959,6 +1005,7 @@ function App(){
   const [ecgMode,setEcgMode]=useState('cardiaco');
   const [amplitude,setAmplitude]=useState(1.0);
   const [stOffset,setStOffset]=useState(0.0);
+  const [nibpRefMode,setNibpRefMode]=useState(false);
   const [spo2Brand,setSpo2Brand]=useState('nellcor');
   const [eq,setEq]=useState({marca:'',modelo:'',serie:'',cliente:'',tecnico:'',ot:''});
   const [cal,setCal]=useState(()=>{try{return JSON.parse(localStorage.getItem('sem_cal'))||defaultCal;}catch{return defaultCal;}});
@@ -1107,7 +1154,7 @@ function App(){
   // Mantener sendRef actualizado con los valores corregidos actuales
   // Se ejecuta en cada render → el interval WiFi/BLE siempre manda lo correcto
   useEffect(()=>{
-    sendRef.current={...cv,rhythm,ecgMode,amplitude:corrAmp,stOffset,running};
+    sendRef.current={...cv,rhythm,ecgMode,amplitude:corrAmp,stOffset,running,nibpRefMode};
   });
 
   const SCREEN_TITLES={home:'SEM Simulator',monitor:'Monitor Multiparamétrico',spo2:'Saturometría SpO₂',ecg:'ECG',ajustes:'Ajustes',verif:'Verificación',informe:'Informe'};
@@ -1139,7 +1186,7 @@ function App(){
         {screen==='spo2'&&<Spo2Screen vitals={vitals} setV={setV} cv={cv} rhythm={rhythm} setRhythm={setRhythm} running={running} ecgMode={ecgMode} amplitude={corrAmp} stOffset={stOffset} cal={cal} brand={spo2Brand} setBrand={setSpo2Brand} prog={prog} setProg={setProg} applyProg={applyProg}/>}
         {screen==='ecg'&&<EcgScreen vitals={vitals} setV={setV} cv={cv} rhythm={rhythm} setRhythm={setRhythm} running={running} ecgMode={ecgMode} setEcgMode={setEcgMode} amplitude={amplitude} setAmplitude={setAmplitude} stOffset={stOffset} setStOffset={setStOffset} cal={cal} prog={prog} setProg={setProg} applyProg={applyProg}/>}
         {screen==='ajustes'&&<AjustesScreen cal={cal} setCal={setCal} connMode={connMode} bleReconnecting={bleReconnecting} onReconnect={handleManualReconnect}/>}
-        {screen==='verif'&&<VerifScreen vitals={{hr:cv.hr,spo2:cv.spo2,sys:cv.sys,dia:cv.dia,temp:cv.temp}} sensorData={sensorData}/>}
+        {screen==='verif'&&<VerifScreen vitals={{hr:cv.hr,spo2:cv.spo2,sys:cv.sys,dia:cv.dia,temp:cv.temp}} sensorData={sensorData} setNibpRefMode={setNibpRefMode}/>}
         {screen==='informe'&&<InformeScreen eq={eq} setEq={setEq}/>}
       </div>
     </div>
