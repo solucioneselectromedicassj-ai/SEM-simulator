@@ -4212,6 +4212,19 @@ function App() {
     verif: 'Verificación',
     informe: 'Informe'
   };
+
+  // Avisos que antes quedaban enterrados (en el log de Serial, o en un
+  // campo de fecha que nadie mira) — ahora se muestran en toda la app,
+  // no solo en Ajustes, porque importan mientras se está probando un
+  // equipo, no solo al configurar.
+  const warnings = [];
+  if (connMode !== 'demo' && sensorData) {
+    if (sensorData.dacOK === false) warnings.push('DAC (MCP4725) no responde — la señal de ECG puede no estar saliendo');
+    if (sensorData.adsOK === false) warnings.push('ADC (ADS1115) no responde — presión/NIBP no es confiable');
+  }
+  const todayStr = new Date().toISOString().split('T')[0];
+  const overdueCals = ['nibp', 'temp', 'ecg', 'spo2'].filter(k => cal[k].applied && cal[k].nextDate && cal[k].nextDate < todayStr);
+  if (overdueCals.length) warnings.push(`Calibración vencida: ${overdueCals.map(k => PARAM_CFG[k].label.split(' ')[0]).join(', ')}`);
   if (!appReady) return /*#__PURE__*/React.createElement(ConnectScreen, {
     onConnect: handleConnect,
     onDemo: handleDemo
@@ -4290,7 +4303,27 @@ function App() {
       cursor: 'pointer',
       flexShrink: 0
     }
-  }, running ? '⏸' : '▶')), /*#__PURE__*/React.createElement("div", {
+  }, running ? '⏸' : '▶')), warnings.length > 0 && /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: 'rgba(230,57,70,0.12)',
+      borderBottom: '1px solid #E63946',
+      padding: '6px 16px',
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 2,
+      flexShrink: 0
+    }
+  }, warnings.map((w, i) => /*#__PURE__*/React.createElement("div", {
+    key: i,
+    style: {
+      fontSize: 11,
+      color: '#E63946',
+      fontWeight: 600,
+      display: 'flex',
+      alignItems: 'center',
+      gap: 6
+    }
+  }, /*#__PURE__*/React.createElement("span", null, "\u26A0"), w))), /*#__PURE__*/React.createElement("div", {
     style: {
       flex: 1,
       overflow: 'hidden',
